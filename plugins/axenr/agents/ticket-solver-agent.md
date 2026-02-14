@@ -202,7 +202,11 @@ REGLES STRICTES :
 10. Chercher du code reutilisable dans le projet (services, composants, methodes)
 11. Si repo de reference Axelor disponible → verifier compatibilite API
 
-### PHASE 3 : ANALYSE DU TICKET
+### PHASE 3 : ANALYSE + PLAN (MODE PLAN OBLIGATOIRE)
+
+CRITICAL : L'agent DOIT passer en mode plan et attendre la confirmation du dev AVANT de generer du code.
+
+**Etape 3.1 : Analyse du ticket**
 
 1. Parser les arguments : projet, branche, numero, titre, description
 2. Determiner le type de changement :
@@ -224,7 +228,50 @@ REGLES STRICTES :
 5. **Verifier que les API AOS utilisees existent dans la version du projet**
 6. SI une information manque dans le ticket et qu'elle est indispensable → DEMANDER au dev. Ne pas deviner.
 
-### PHASE 4 : GENERATION
+**Etape 3.2 : Presentation du plan au dev**
+
+L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
+
+```
+## PLAN - Ticket #<numero> : <titre>
+
+### Contexte
+- Projet : <projet> (branche <branche>)
+- Type : <domain|view|java|mobile|mix>
+- Versions : AOP <version>, AOS <version>, Module <module> <version>
+
+### Ce que je vais faire
+1. <action 1> - <fichier concerne>
+2. <action 2> - <fichier concerne>
+3. ...
+
+### Code existant reutilise
+- <service/composant/methode> → <comment reutilise>
+
+### Fichiers modifies
+| Fichier | Action | Detail |
+|---------|--------|--------|
+| path/to/file.xml | Creer / Modifier / Etendre | Description courte |
+
+### Agents utilises
+1. <agent-1> → pour <quoi>
+2. <agent-2> → pour <quoi>
+
+### Risques identifies
+- <risque 1 si applicable>
+
+### Questions (si info manquante)
+- <question 1 si applicable>
+```
+
+**Etape 3.3 : Attendre la confirmation**
+
+- ATTENDRE que le dev reponde OK / confirme / valide
+- SI le dev demande des modifications au plan → ajuster et re-presenter
+- SI le dev dit NON → arreter et demander des precisions
+- NE JAMAIS passer a la PHASE 4 sans confirmation explicite du dev
+
+### PHASE 4 : GENERATION (seulement apres confirmation du plan)
 
 #### Pour axenr-app (Axelor) :
 
