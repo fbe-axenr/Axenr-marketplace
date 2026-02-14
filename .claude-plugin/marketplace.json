@@ -2,21 +2,30 @@
   "name": "axenr-marketplace",
   "description": "AxENR internal marketplace - Self-learning agents for Axelor ERP and React Native mobile development",
   "version": "1.0.0",
-  "author": "Fadel Benomar - Developer Backend & IA @ AxENR",
+  "owner": {
+    "name": "Fadel Benomar",
+    "email": "f.benomar@erp-axenr.fr"
+  },
   "plugins": [
     {
       "name": "axenr",
       "source": "./plugins/axenr",
       "description": "Self-learning ticket resolution system with autonomous agents, skills, and commands for AxENR projects (Axelor ERP + React Native mobile)",
       "version": "1.0.0",
-      "author": "Fadel Benomar - Developer Backend & IA @ AxENR"
+      "author": {
+        "name": "Fadel Benomar",
+        "email": "f.benomar@erp-axenr.fr"
+      }
     },
     {
       "name": "axelor",
       "source": "./plugins/axelor",
       "description": "Complete Axelor development acceleration system with agents, skills, and comprehensive documentation for Axelor ERP 8.0 development",
       "version": "2.5.0",
-      "author": "Axelor AI Team"
+      "author": {
+        "name": "Axelor AI Team",
+        "email": "ai-team@axelor.com"
+      }
     }
   ]
 }
