@@ -38,6 +38,8 @@ axenr-marketplace/
 | error-learner | Analyse les erreurs, cree des lecons dans LESSONS-LEARNED.md |
 | knowledge-updater | Promeut les lecons confirmees (3+ occurrences) dans CLAUDE.md du projet |
 | pre-flight-checker | Charge les lecons pertinentes avant chaque generation de code |
+| enr-coherence-checker | Valide la coherence ENR : generique tous types, temporel cycle commercial, reutilisabilite, anti-patterns |
+| axenr-dev-validator | Valide les regles dev AxENR : 8 regles d'or, domains, views, actions, Java, i18n, extensions, git |
 
 ### Commands AxENR (plugins/axenr/commands/)
 

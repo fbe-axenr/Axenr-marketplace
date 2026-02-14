@@ -21,7 +21,9 @@ Un objet contexte structure contenant :
 
 | Champ | Description |
 |-------|-------------|
-| lessons | Liste des lecons pertinentes extraites de LESSONS-LEARNED.md |
+| lessons | Liste des lecons pertinentes extraites de LESSONS-LEARNED.md (filtrees par type + projet) |
+| enr_lessons | Lecons de type `enr` pour renforcer enr-coherence-checker |
+| dev_lessons | Lecons de type domain/view/action/java/etc. pour renforcer axenr-dev-validator |
 | project_rules | Contenu du CLAUDE.md du projet |
 | dev_guide | Contenu de axelor-dev-guide.md (si axenr-app) |
 | aop_version | Version AOP (ex: 7.4.7) |
@@ -39,8 +41,16 @@ Un objet contexte structure contenant :
    Lire <marketplace_path>/plugins/axenr/docs/lessons/LESSONS-LEARNED.md
    Filtrer les lecons par :
    - projet (axenr-app ou axenr-mobile)
-   - type (domain, view, java, mobile, build, version)
+   - type (domain, view, java, mobile, build, version, enr, action, naming, i18n, rest, migration)
    Retourner les lecons pertinentes au ticket_type
+
+   SEPARER en 3 groupes :
+   - lessons : lecons pertinentes au ticket (pour la generation en PHASE 4)
+   - enr_lessons : lecons type=enr (pour enr-coherence-checker en PHASE 5)
+   - dev_lessons : lecons type=domain/view/action/java/etc. (pour axenr-dev-validator en PHASE 5)
+
+   CALCULER pour chaque lecon :
+   - reinforcement_level : "normal" (1 occurrence), "reinforced" (2+), "promoted" (3+ et promu)
 
 2. REGLES PROJET
    Lire <project_path>/CLAUDE.md (ou le chemin connu du CLAUDE.md)

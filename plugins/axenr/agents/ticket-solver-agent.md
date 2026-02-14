@@ -312,16 +312,128 @@ Generer le code directement :
 
 ### PHASE 5 : VALIDATION
 
-Appeler les agents de validation. Les MEMES agents sont utilises pour les DEUX projets (axenr-app ET axenr-mobile). Les agents s'adaptent au type de code.
+3 etapes OBLIGATOIRES dans cet ordre. Aucune etape ne peut etre sautee.
 
-| Ordre | Agent/Skill | axenr-app | axenr-mobile |
-|-------|-------------|-----------|--------------|
-| 1 | axelor-xml-validator | Valide XSD domains/views | - |
-| 2 | axelor-view-semantic-validator | Valide coherence vues | - |
-| 3 | axelor-java-style-validator | Valide conventions Java | - |
-| 4 | axelor-naming-checker | Valide nommage Axelor | Valide nommage composants |
-| 5 | code-reviewer | Qualite code Java/XML | Qualite code TSX/Redux |
-| 6 | code-analyzer | Securite, perf, pratiques | Securite, perf, pratiques |
+#### 5.1 Charger les lecons (OBLIGATOIRE, AVANT toute validation)
+
+```
+1. Lire LESSONS-LEARNED.md
+2. Separer en 2 groupes :
+   - enr_lessons : type == "enr" → pour enr-coherence-checker
+   - dev_lessons : type == domain/view/action/java/i18n/naming/build/version/rest/migration → pour axenr-dev-validator
+3. Calculer le reinforcement_level de chaque lecon :
+   - 1 occurrence → severity originale
+   - 2+ occurrences → severity + 1 niveau (LOW→MEDIUM, MEDIUM→HIGH, HIGH→CRITICAL)
+   - 3+ occurrences ET promu → CRITICAL (regle permanente)
+```
+
+#### 5.2 Appeler les agents de validation (OBLIGATOIRE, dans cet ordre)
+
+Les agents partenaire Axelor sont appeles EN PREMIER. Leurs resultats sont OBLIGATOIRES et alimentent la boucle.
+
+**Etape A : Agents partenaire Axelor (OBLIGATOIRE - axenr-app)**
+
+| Ordre | Agent | Quand | Obligatoire |
+|-------|-------|-------|-------------|
+| 1 | **axelor-xml-validator** | SI fichiers domains/ ou views/ modifies | OUI pour XML |
+| 2 | **axelor-view-semantic-validator** | SI fichiers views/ modifies | OUI pour views |
+| 3 | **axelor-java-style-validator** | SI fichiers Java modifies | OUI pour Java |
+| 4 | **axelor-naming-checker** | TOUJOURS | OUI |
+| 5 | **code-reviewer** | TOUJOURS | OUI |
+| 6 | **code-analyzer** | TOUJOURS | OUI |
+
+**Etape A : Agents partenaire Axelor (OBLIGATOIRE - axenr-mobile)**
+
+| Ordre | Agent | Quand | Obligatoire |
+|-------|-------|-------|-------------|
+| 1 | **axelor-naming-checker** | TOUJOURS | OUI |
+| 2 | **code-reviewer** | TOUJOURS | OUI |
+| 3 | **code-analyzer** | TOUJOURS | OUI |
+
+Collecter TOUTES les violations des agents partenaire. Ne pas les ignorer.
+
+**Etape B : Skills AxENR (OBLIGATOIRE, EN PARALLELE, avec resultats agents)**
+
+Les 2 skills recoivent les violations des agents partenaire ET les lecons renforcees.
+
+| Ordre | Skill | Recoit en input | Role | Seuil |
+|-------|-------|-----------------|------|-------|
+| 7 | **enr-coherence-checker** | violations code-reviewer + code-analyzer + enr_lessons | Generique ENR, temporel, reutilisabilite, anti-patterns | Score >= 70 |
+| 8 | **axenr-dev-validator** | violations TOUS agents (1-6) + dev_lessons | 8 regles d'or, domains, views, actions, Java, i18n, ext, git | Score >= 70 |
+
+**Etape C : MERGE et DEDUPLICATION**
+
+```
+1. Prendre les violations des agents partenaire (etape A)
+2. Prendre les violations des skills AxENR (etape B)
+3. Deduplication : si un agent ET un skill detectent le MEME probleme → garder la severite la PLUS haute
+4. Tagger chaque violation avec sa source (nom de l'agent ou ID de regle)
+5. Resultat = liste unifiee de TOUTES les violations
+```
+
+#### 5.3 Boucle de renforcement bidirectionnelle
+
+```
+                       LESSONS-LEARNED.md
+                      /        |         \
+             (lit avant)       |    (ecrit apres)
+            /                  |              \
+  enr-coherence-checker   axenr-dev-validator  error-learner
+    ↑          ↑              ↑          ↑           ↑
+    | recoit   |              | recoit   |           |
+    | resultats|              | resultats|           |
+    |          |              |          |           |
+  code-      code-    xml-      java-    naming-     |
+  reviewer   analyzer validator style    checker     |
+  (appele    (appele  (appele   (appele  (appele     |
+   etape A)   etape A) etape A)  etape A) etape A)   |
+    |          |        |        |        |          |
+    └──────────┴────────┴────────┴────────┘          |
+                    |                                |
+         violations TOUTES (merge etape C)           |
+                    |                                |
+                    └──── PHASE 6 : error-learner ───┘
+```
+
+**Direction 1 : Lessons → Skills + Agents (REINFORCEMENT)**
+- AVANT validation, les skills lisent les lecons de LESSONS-LEARNED.md (etape 5.1)
+- Lecons 2+ occurrences → severite UPGRADED
+- Les violations des agents partenaire qui matchent une lecon existante sont aussi renforcees par les skills
+- Lecons promues (3+ dans CLAUDE.md) → deviennent CRITICAL
+
+**Direction 2 : Agents + Skills → Lessons (LEARNING)**
+- APRES validation, TOUTES les violations (agents + skills) sont envoyees a error-learner (PHASE 6)
+- Mapping source → type lecon :
+
+| Source | Type lecon |
+|--------|-----------|
+| axelor-xml-validator | domain ou view (selon fichier) |
+| axelor-view-semantic-validator | view |
+| axelor-java-style-validator | java |
+| axelor-naming-checker | naming |
+| code-reviewer | domain, view, ou java (selon fichier) |
+| code-analyzer | java |
+| enr-coherence-checker | enr |
+| axenr-dev-validator (DOM-*) | domain |
+| axenr-dev-validator (VIEW-*) | view |
+| axenr-dev-validator (ACT-*) | action |
+| axenr-dev-validator (JAVA-*) | java |
+| axenr-dev-validator (I18N-*) | i18n |
+| axenr-dev-validator (EXT-*) | naming |
+| axenr-dev-validator (GIT-*) | build |
+| build failure | build |
+
+**Resultat** : le systeme entier (agents partenaire + skills AxENR) s'AUTO-AMELIORE. Une erreur detectee par code-reviewer aujourd'hui sera detectee plus severement par axenr-dev-validator demain.
+
+#### 5.4 Seuils et regles
+
+- SI le score d'un skill est < 70 → STOP, corriger les violations AVANT de continuer
+- Les violations CRITICAL doivent TOUTES etre resolues, sans exception
+- Les violations HIGH doivent etre resolues si possible (sauf justification dans le rapport)
+- Les violations MEDIUM et LOW sont des recommandations
+- APRES correction, re-lancer TOUTE la PHASE 5 (agents partenaire + skills AxENR)
+
+#### 5.5 Build de verification (OBLIGATOIRE)
 
 En plus, pour chaque projet :
 
@@ -334,17 +446,32 @@ axenr-mobile :
   yarn lint (ESLint)
 ```
 
-Collecter toutes les issues. Classer par severite.
+Collecter toutes les issues (agents + skills + build). Classer par severite.
 
 ### PHASE 6 : CORRECTION + APPRENTISSAGE (boucle max 3 iterations)
 
-Pour chaque issue CRITICAL ou HIGH :
+Pour chaque issue CRITICAL ou HIGH (agents partenaire ET skills AxENR) :
 
-1. Analyser l'erreur (message, fichier, ligne)
+1. Analyser l'erreur (message, fichier, ligne, source)
 2. Appeler le skill **error-learner** :
    - Chercher si l'erreur existe deja dans LESSONS-LEARNED.md
    - SI OUI : incrementer le compteur d'occurrences
    - SI NON : creer une nouvelle lecon (LESSON-XXX)
+   - Mapping source → type :
+     - enr-coherence-checker → type `enr`
+     - axenr-dev-validator (DOM-*) → type `domain`
+     - axenr-dev-validator (VIEW-*) → type `view`
+     - axenr-dev-validator (ACT-*) → type `action`
+     - axenr-dev-validator (JAVA-*) → type `java`
+     - axenr-dev-validator (I18N-*) → type `i18n`
+     - axenr-dev-validator (EXT-*) → type `naming`
+     - axenr-dev-validator (GIT-*) → type `build`
+     - axelor-xml-validator → type `domain` ou `view` (selon fichier)
+     - axelor-java-style-validator → type `java`
+     - axelor-naming-checker → type `naming`
+     - code-reviewer → type selon contexte (domain, view, java)
+     - code-analyzer → type `java`
+     - build failure → type `build`
 3. Appliquer le fix dans le code du projet
 4. Appeler le skill **knowledge-updater** :
    - SI une lecon atteint 3 occurrences → promouvoir automatiquement dans CLAUDE.md du marketplace
@@ -395,6 +522,8 @@ SI le build echoue :
 - **Verifier le repo git Axelor si disponible pour les changements d'API**
 - Utiliser les agents Axelor partenaire pour la generation ET la validation
 - Utiliser les agents de validation pour les DEUX projets (app et mobile)
+- Passer les lecons LESSONS-LEARNED.md aux skills de validation pour le renforcement bidirectionnel
+- Envoyer chaque violation detectee a error-learner pour alimenter la boucle d'apprentissage
 - Ecrire les lecons dans le marketplace, JAMAIS dans le projet
 - Generer un TEST PLAN meme si le build passe
 - Respecter les conventions de nommage du projet cible
@@ -441,13 +570,22 @@ ticket-solver-agent
 │   ├── java-agent (si java) → check API version AOS
 │   └── (code direct si mobile) → check i18n
 │
-├── PHASE 5 : Validation (agents partenaire Axelor, POUR LES DEUX PROJETS)
-│   ├── axelor-xml-validator
-│   ├── axelor-view-semantic-validator
-│   ├── axelor-java-style-validator
-│   ├── axelor-naming-checker
-│   ├── code-reviewer
-│   └── code-analyzer
+├── PHASE 5 : Validation (3 etapes OBLIGATOIRES)
+│   ├── 5.1 Charger lecons LESSONS-LEARNED.md → renforcer severites
+│   ├── 5.2 Appeler agents + skills :
+│   │   ├── Etape A : Agents partenaire Axelor (OBLIGATOIRE)
+│   │   │   ├── axelor-xml-validator (si XML)
+│   │   │   ├── axelor-view-semantic-validator (si views)
+│   │   │   ├── axelor-java-style-validator (si Java)
+│   │   │   ├── axelor-naming-checker (toujours)
+│   │   │   ├── code-reviewer (toujours)
+│   │   │   └── code-analyzer (toujours)
+│   │   ├── Etape B : Skills AxENR (OBLIGATOIRE, EN PARALLELE)
+│   │   │   ├── enr-coherence-checker (recoit violations agents + enr_lessons)
+│   │   │   └── axenr-dev-validator (recoit violations agents + dev_lessons)
+│   │   └── Etape C : Merge + deduplication toutes violations
+│   ├── 5.3 Boucle renforcement : TOUTES violations → PHASE 6 → LESSONS-LEARNED.md
+│   └── 5.5 Build de verification (OBLIGATOIRE)
 │
 ├── PHASE 6 : Apprentissage (skills AxENR)
 │   ├── error-learner → ecrit dans LESSONS-LEARNED.md

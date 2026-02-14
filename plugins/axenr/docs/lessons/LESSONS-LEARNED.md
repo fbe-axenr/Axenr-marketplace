@@ -9,9 +9,9 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| Total lecons | 42 |
+| Total lecons | 52 |
 | Lecons promues dans CLAUDE.md | 0 |
-| Lecons en attente | 42 |
+| Lecons en attente | 52 |
 | Taux de promotion | 0% |
 
 ---
@@ -20,7 +20,7 @@
 
 ```
 ### LESSON-XXX : <titre court>
-- **Type** : domain | view | action | java | build | version | mobile | naming | i18n | rest | migration
+- **Type** : domain | view | action | java | build | version | mobile | naming | i18n | rest | migration | enr
 - **Projet** : axenr-app | axenr-mobile | both
 - **Erreur** : description du pattern d'erreur
 - **Correction** : comment corriger
@@ -527,6 +527,100 @@
 - **Projet** : axenr-app
 - **Erreur** : Supprimer une action existante pour la remplacer par une nouvelle
 - **Correction** : GARDER l'ancienne action ET ajouter la nouvelle. D'autres boutons/menus peuvent referencer l'ancienne
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+---
+
+## ANTI-PATTERNS ENR (coherence metier)
+
+### LESSON-051 : Nommage PV-specifique (ENR-AP-01)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Nommer un champ/classe avec des termes PV-specifiques (`solar`, `panel`, `module`, `onduleur`, `string`) sans contexte generique. Ex: `PvInstallationService`, `numberOfModules`, `inverterCapacity`
+- **Correction** : Utiliser des termes generiques (`EnrInstallationService`, `numberOfEquipments`, `mainEquipmentCapacity`) ou ajouter un qualifieur de type ENR
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-052 : Bouton/action sans garde de lifecycle (ENR-AP-02)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Bouton ou action visible a toutes les etapes du cycle commercial sans condition `hideIf`/`readonlyIf` basee sur `statusSelect`. Ex: bouton "Generer facture" visible en PROSPECTION
+- **Correction** : Ajouter `hideIf="statusSelect &lt; N"` ou `readonlyIf="statusSelect != N"` selon l'etape appropriee du cycle ENR (PROSPECTION=1, QUALIFICATION=2, DEVIS=3, PASSATION_BE=4, ADMINISTRATIF=5, PLANIFICATION=6, APPROVISIONNEMENT=7, CHANTIER=8, MISE_EN_SERVICE=9, FACTURATION=10, DOE_SAV=11)
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-053 : Seuil metier hardcode PV-specifique (ENR-AP-03)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Hardcoder des seuils PV-specifiques comme magic numbers : `9` (kWc autoconsommation), `36` (kWc seuil moyen), `100` (kWc seuil grande puissance). Ex: `if (power > 9)`
+- **Correction** : Utiliser l'entite `AxenrConfig` avec une cle par type ENR. Ex: `axenrConfig.getThreshold(enrType)` au lieu du magic number
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-054 : Acces donnees d'une etape future (ENR-AP-04)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Acceder a un champ qui n'existe pas encore a l'etape courante du cycle. Ex: lire `installationDate` en PROSPECTION (disponible seulement apres PLANIFICATION), lire `consuelRef` en DEVIS (disponible apres ADMINISTRATIF)
+- **Correction** : Garder chaque acces par une verification de l'etape (`statusSelect >= N`) et ajouter du null-safety sur les champs dependants de l'etape
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-055 : Service monolithique ENR (ENR-AP-05)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Un seul service qui gere tous les types ENR avec des if/else massifs. Ex: `if (type == PV) { ... } else if (type == PAC) { ... } else if (type == IRVE) { ... }`
+- **Correction** : Utiliser le pattern Strategy avec une interface generique et une implementation par type ENR. Ou utiliser le polymorphisme avec une factory
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-056 : Selection non extensible aux nouveaux types ENR (ENR-AP-06)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Selection hardcodee qui ne couvre que certains types ENR ou qui ne permet pas d'en ajouter. Ex: selection avec uniquement "Rooftop PV" et "Ground mount PV"
+- **Correction** : Utiliser une table de reference configurable au lieu d'une selection hardcodee, ou inclure des options pour TOUS les types ENR (PV, PAC, IRVE, eolien, geothermie, biomasse, solaire thermique)
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-057 : Calcul prime/subvention manquant (ENR-AP-07)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Code de facturation ou de devis qui ne prend pas en compte les subventions energetiques (MaPrimeRenov, CEE, prime autoconsommation)
+- **Correction** : Ajouter un hook de calcul de prime/subvention dans le workflow de devis et facturation. Les primes varient par type ENR
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-058 : Unite PV-specifique (ENR-AP-08)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Utiliser `kWc` (kilowatt-crete) comme unite universelle alors que c'est specifique au PV. Les PAC utilisent `COP`, l'IRVE utilise `kW`, le thermique utilise `kWth`
+- **Correction** : Utiliser une unite generique avec conversion par type ENR, ou stocker l'unite dans une table de reference liee au type ENR
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-059 : Contraintes site ignorees par type ENR (ENR-AP-09)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Pas de verification des contraintes specifiques au site pour chaque type ENR. Ex: PV necessite orientation/inclinaison toiture, PAC necessite distance voisins, IRVE necessite puissance electrique disponible
+- **Correction** : Ajouter une validation de site parametree par type ENR dans l'etape QUALIFICATION
+- **Occurrences** : 1
+- **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-060 : Planning sans consideration saisonniere (ENR-AP-10)
+- **Type** : enr
+- **Projet** : axenr-app
+- **Erreur** : Planification de chantier sans prendre en compte les contraintes meteo/saison. Ex: installation PV en toiture en plein hiver, PAC geothermie avec sol gele
+- **Correction** : Ajouter un hook de planification meteo-aware dans l'etape PLANIFICATION, avec des contraintes configurables par type ENR et region
 - **Occurrences** : 1
 - **Tickets** : initial-seed
 - **Promu** : false
