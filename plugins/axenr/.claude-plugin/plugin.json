@@ -1,0 +1,19 @@
+{
+  "name": "axenr",
+  "version": "1.0.0",
+  "description": "Self-learning ticket resolution system for AxENR projects",
+  "author": "Fadel Benomar - Developer Backend & IA @ AxENR",
+  "agents": [
+    "agents/ticket-solver-agent.md"
+  ],
+  "skills": [
+    "skills/error-learner/error-learner.md",
+    "skills/knowledge-updater/knowledge-updater.md",
+    "skills/pre-flight-checker/pre-flight-checker.md"
+  ],
+  "commands": [
+    "commands/solve-ticket.md",
+    "commands/solve-batch.md",
+    "commands/learn-review.md"
+  ]
+}

@@ -1,0 +1,3 @@
+[submodule "plugins/axelor-partner"]
+	path = plugins/axelor-partner
+	url = git@git.axelor.com:ia-tools/axelor-claude-marketplace.git
