@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Decimal Precision Patterns
+  Source: axelor-sale/src/main/resources/domains/SaleOrderLine.xml (AOS 7.4)
+  Complexity: ⭐⭐ Intermediate
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - Different precision patterns for different use cases
+  - When to use high precision vs display precision
+  - Best practices from 700+ AOS entities analysis
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="sale" package="com.axelor.apps.sale.db"/>
+
+  <entity name="SaleOrderLine">
+
+    <!-- Basic fields -->
+    <string name="productName" required="true"/>
+    <many-to-one name="product" ref="com.axelor.apps.base.db.Product"/>
+
+    <!--
+      PATTERN 1: QUANTITIES
+      Precision: 20 total digits, 10 decimal places
+      Use case: Quantities that need high precision
+    -->
+    <decimal name="qty"
+      title="Qty"
+      default="1"
+      precision="20"
+      scale="10"/>
+
+    <decimal name="deliveredQty"
+      title="Delivered quantity"
+      precision="20"
+      scale="10"/>
+
+    <decimal name="oldQty"
+      hidden="true"
+      precision="20"
+      scale="10"/>
+
+    <!--
+      PATTERN 2: UNIT PRICES
+      Precision: 20 total digits, 10 decimal places
+      Use case: Base prices before calculations
+    -->
+    <decimal name="price"
+      title="Unit price W.T."
+      precision="20"
+      scale="10"/>
+
+    <decimal name="inTaxPrice"
+      title="Unit price A.T.I."
+      precision="20"
+      scale="10"/>
+
+    <!--
+      PATTERN 3: INTERMEDIATE CALCULATIONS
+      Precision: 30 total digits, 20 decimal places
+      Use case: Discounted prices, multiplications, divisions
+      Why: Prevents rounding errors in calculations
+    -->
+    <decimal name="priceDiscounted"
+      title="Unit price discounted"
+      precision="30"
+      scale="20"/>
+
+    <decimal name="discountAmount"
+      title="Discount amount"
+      precision="30"
+      scale="20"/>
+
+    <!--
+      PATTERN 4: DISPLAY TOTALS
+      Precision: 20 total digits, 3 decimal places
+      Use case: Final totals shown to user
+      Why: Balance between precision and readability
+    -->
+    <decimal name="exTaxTotal"
+      title="Total W.T."
+      precision="20"
+      scale="3"
+      readonly="true"/>
+
+    <decimal name="inTaxTotal"
+      title="Total A.T.I."
+      precision="20"
+      scale="3"
+      readonly="true"/>
+
+    <decimal name="subTotalCostPrice"
+      title="SubTotal cost price"
+      precision="20"
+      scale="3"/>
+
+    <!--
+      PATTERN 5: COMPANY CURRENCY AMOUNTS
+      Precision: 20 total digits, 3 decimal places
+      Use case: Amounts in company's accounting currency
+      Often hidden from user, used for reporting
+    -->
+    <decimal name="companyExTaxTotal"
+      title="Total W.T. in company currency"
+      hidden="true"
+      precision="20"
+      scale="3"
+      readonly="true"/>
+
+    <decimal name="companyCostPrice"
+      title="Unit cost price in company currency"
+      hidden="true"
+      precision="20"
+      scale="3"
+      readonly="true"/>
+
+    <!--
+      PATTERN 6: PERCENTAGES
+      Precision: 10 total digits, 2 decimal places
+      Use case: Rates, percentages, ratios
+    -->
+    <decimal name="subMarginRate"
+      title="Sub margin rate"
+      precision="10"
+      scale="2"/>
+
+    <!-- Discount type selector -->
+    <integer name="discountTypeSelect"
+      title="Discount type"
+      selection="base.price.list.line.amount.type.select"
+      default="0"/>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  PRECISION DECISION TREE:
+
+  ┌─ What are you storing?
+  │
+  ├─ Quantity
+  │  └─ precision="20" scale="10"
+  │     Examples: qty, deliveredQty, orderedQty
+  │
+  ├─ Unit Price
+  │  └─ precision="20" scale="10"
+  │     Examples: price, unitCost, purchasePrice
+  │
+  ├─ Intermediate Calculation
+  │  └─ precision="30" scale="20"
+  │     Examples: priceDiscounted, discountAmount, taxBase
+  │     Why: Avoid rounding errors in multi-step calculations
+  │
+  ├─ Display Total
+  │  └─ precision="20" scale="3"
+  │     Examples: exTaxTotal, inTaxTotal, totalAmount
+  │     Why: Balance precision vs readability
+  │
+  ├─ Accounting Total
+  │  └─ precision="18" scale="2"
+  │     Examples: accountMove amounts, journal entries
+  │     Why: Standard accounting precision
+  │
+  └─ Percentage/Rate
+     └─ precision="10" scale="2"
+        Examples: taxRate, discountRate, marginRate
+        Why: Percentages rarely exceed 100, 2 decimals sufficient
+
+
+  CALCULATION FLOW EXAMPLE:
+
+  1. Start with base price (20,10):
+     price = 123.4567890000
+
+  2. Apply discount calculation (30,20):
+     discountAmount = price × discountRate / 100
+     priceDiscounted = price - discountAmount
+     // High precision prevents accumulation of rounding errors
+
+  3. Multiply by quantity (30,20):
+     lineTotal = priceDiscounted × qty
+     // Still high precision
+
+  4. Round for display (20,3):
+     exTaxTotal = ROUND(lineTotal, 3)
+     // Final rounding for user display
+
+
+  KEY PRINCIPLES:
+
+  1. Start with Standard Patterns:
+     - Don't reinvent: use proven patterns from AOS
+     - Quantities: (20,10)
+     - Calculations: (30,20)
+     - Display: (20,3)
+
+  2. Calculation Precision Rules:
+     - Input fields: (20,10) or (20,3)
+     - Intermediate calculations: (30,20)
+     - Final results: (20,3)
+     - Never less precision in calculations than in inputs
+
+  3. Database Considerations:
+     - precision="20" scale="3" → NUMERIC(20,3) in PostgreSQL
+     - Higher precision = more storage
+     - Balance precision needs vs storage/performance
+
+  4. Common Mistakes to Avoid:
+     ❌ Using same precision for input and calculations
+     ❌ Too low precision causing rounding errors
+     ❌ Too high precision everywhere (wastes space)
+     ❌ Using float/double for money (use decimal)
+
+  5. Testing Precision:
+     - Test with: 0.1 + 0.2 (should equal 0.3)
+     - Test edge cases: very small and very large numbers
+     - Test accumulated calculations (sum of 1000 lines)
+     - Compare with Excel calculations
+
+
+  REAL-WORLD EXAMPLE from AOS:
+
+  SaleOrderLine calculation flow:
+  1. price (20,10): 99.99
+  2. qty (20,10): 3.5
+  3. discountRate: 10%
+  4. Calculate:
+     discountAmount (30,20) = 99.99 × 0.10 = 9.999
+     priceDiscounted (30,20) = 99.99 - 9.999 = 89.991
+     lineTotal (30,20) = 89.991 × 3.5 = 314.9685
+  5. Round to display (20,3):
+     exTaxTotal = 314.969
+
+  Without high precision in calculations:
+     With (20,3) only: 315.00 (loses cents!)
+     With (30,20): 314.969 (correct)
+-->

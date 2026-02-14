@@ -1,0 +1,228 @@
+{
+  "description": "File exclusion patterns for git safety checking",
+  "version": "1.0.0",
+  "patterns": {
+    "buildArtifacts": {
+      "severity": "blocking",
+      "description": "Compiled code and build outputs that should never be committed",
+      "patterns": [
+        "build/",
+        "target/",
+        "bin/",
+        "out/",
+        "dist/",
+        "*.class",
+        "*.jar",
+        "*.war",
+        "*.ear",
+        ".gradle/",
+        "node_modules/",
+        "__pycache__/",
+        "*.pyc",
+        "*.pyo",
+        "*.so",
+        "*.dll",
+        "*.exe",
+        "*.o",
+        "*.a",
+        "*.lib",
+        "*.dylib",
+        ".next/",
+        ".nuxt/",
+        "*.bundle.js",
+        "*.chunk.js",
+        "*.egg-info/"
+      ],
+      "exceptions": [
+        "libs/*.jar",
+        "src/main/resources/*.jar"
+      ]
+    },
+    "ideConfigurations": {
+      "severity": "warning",
+      "description": "IDE-specific configuration files",
+      "patterns": [
+        ".idea/",
+        "*.iml",
+        "*.iws",
+        "*.ipr",
+        ".settings/",
+        ".project",
+        ".classpath",
+        ".vscode/settings.json",
+        ".vscode/launch.json",
+        "*.swp",
+        "*.swo",
+        "*~",
+        ".~*"
+      ],
+      "exceptions": [
+        ".vscode/extensions.json",
+        ".vscode/tasks.json"
+      ]
+    },
+    "sensitiveData": {
+      "severity": "blocking",
+      "description": "Files that may contain sensitive information",
+      "patterns": [
+        ".env",
+        ".env.local",
+        ".env.*.local",
+        ".env.development.local",
+        ".env.test.local",
+        ".env.production.local",
+        "credentials.json",
+        "credentials.yml",
+        "credentials.yaml",
+        "secrets.json",
+        "secrets.yml",
+        "secrets.yaml",
+        "*.pem",
+        "*.key",
+        "*.p12",
+        "*.pfx",
+        "*.keystore",
+        "*.jks",
+        "id_rsa",
+        "id_dsa",
+        "*.ppk"
+      ],
+      "contentPatterns": [
+        "password\\s*=",
+        "api[_-]?key\\s*=",
+        "secret\\s*=",
+        "token\\s*=",
+        "private[_-]?key",
+        "access[_-]?key",
+        "AWS_SECRET",
+        "DATABASE_PASSWORD"
+      ]
+    },
+    "osSpecificFiles": {
+      "severity": "warning",
+      "description": "Operating system specific files",
+      "patterns": [
+        ".DS_Store",
+        "._*",
+        "Thumbs.db",
+        "desktop.ini",
+        ".directory",
+        "*.lnk"
+      ]
+    },
+    "mergConficts": {
+      "severity": "blocking",
+      "description": "Files with unresolved merge conflicts",
+      "contentPatterns": [
+        "^<<<<<<< ",
+        "^=======$",
+        "^>>>>>>> "
+      ]
+    },
+    "largeBinaryFiles": {
+      "severity": "warning",
+      "description": "Large binary files that should use Git LFS",
+      "extensions": [
+        ".zip",
+        ".tar",
+        ".tar.gz",
+        ".tgz",
+        ".rar",
+        ".7z",
+        ".mp4",
+        ".mov",
+        ".avi",
+        ".mkv",
+        ".pdf",
+        ".psd",
+        ".ai"
+      ],
+      "sizeThresholdMB": 10
+    },
+    "temporaryFiles": {
+      "severity": "warning",
+      "description": "Temporary and cache files",
+      "patterns": [
+        "*.tmp",
+        "*.temp",
+        "*.log",
+        "*.cache",
+        ".cache/",
+        "tmp/",
+        "temp/",
+        "*.bak",
+        "*.backup",
+        "*.old"
+      ],
+      "exceptions": [
+        "src/main/resources/*.log"
+      ]
+    },
+    "packageManagers": {
+      "severity": "info",
+      "description": "Package manager lock files (usually should commit)",
+      "patterns": [
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "poetry.lock",
+        "Gemfile.lock",
+        "Cargo.lock"
+      ],
+      "note": "These are usually safe to commit, but verify they should be included"
+    }
+  },
+  "fileTypeCategories": {
+    "source": [
+      ".java",
+      ".js",
+      ".ts",
+      ".py",
+      ".rb",
+      ".go",
+      ".rs",
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp"
+    ],
+    "configuration": [
+      ".json",
+      ".yml",
+      ".yaml",
+      ".xml",
+      ".properties",
+      ".conf",
+      ".config",
+      ".ini"
+    ],
+    "documentation": [
+      ".md",
+      ".txt",
+      ".rst",
+      ".adoc"
+    ],
+    "web": [
+      ".html",
+      ".css",
+      ".scss",
+      ".sass",
+      ".less"
+    ]
+  },
+  "recommendations": {
+    "buildArtifacts": "Add build output directories to .gitignore. Never commit compiled code.",
+    "ideConfigurations": "Add IDE-specific files to .gitignore. Each developer may have different settings.",
+    "sensitiveData": "CRITICAL: Never commit credentials or secrets. Use environment variables or secret management tools.",
+    "osSpecificFiles": "Add OS-specific files to .gitignore. These vary by developer's operating system.",
+    "mergeConflicts": "Resolve all merge conflicts before committing. Check for conflict markers.",
+    "largeBinaryFiles": "Consider using Git LFS for large binary files to keep repository size manageable.",
+    "temporaryFiles": "Add temporary files to .gitignore. These should be generated, not committed."
+  },
+  "autoExcludeRules": {
+    "enabled": true,
+    "severityThreshold": "warning",
+    "autoAddToGitignore": true,
+    "backupOriginalGitignore": true
+  }
+}

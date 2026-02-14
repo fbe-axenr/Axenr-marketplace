@@ -1,0 +1,666 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Toolbar and Menubar Patterns - Complete Guide
+SOURCE: axelor-open-suite/axelor-account/Invoice.xml + axelor-sale/SaleOrder.xml + axelor-production/ManufOrder.xml
+BEST PRACTICE: Organizing primary and secondary actions in grids and forms
+CONTEXT: Toolbar for prominent actions, Menubar for grouped/batch operations
+KEY PATTERNS:
+- Toolbar with single/multiple buttons
+- Menubar with nested menu structure
+- Combining toolbar and menubar
+- Menu items with prompts
+- Conditional menu items (if, if-module, showIf)
+- Action chaining in toolbar buttons
+- Icon usage and positioning
+- showTitle for menu labels
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Simple Toolbar in Grid (Single Button) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="manuf-order-grid-simple" title="Manufacturing orders"
+        model="com.axelor.apps.production.db.ManufOrder">
+
+    <!-- PATTERN: Single primary action in toolbar -->
+    <toolbar>
+      <button name="mergeBtn" title="Merge manufacturing orders" icon="fa-code-fork"
+              onClick="action-manuf-order-group-merge"/>
+    </toolbar>
+
+    <field name="manufOrderSeq"/>
+    <field name="product"/>
+    <field name="statusSelect"/>
+
+  </grid>
+
+  <!--
+  EXPLANATION:
+  - Toolbar: Horizontal bar at top of grid
+  - Single most important action (print, export, merge, create)
+  - Button attributes:
+    - name: Unique identifier
+    - title: Display text (or use title attribute for tooltip if no text)
+    - icon: Font Awesome icon (fa-*)
+    - onClick: Action or action chain
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Toolbar with Multiple Buttons -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="sale-order-grid-toolbar" title="Sale orders"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <!-- PATTERN: Multiple related actions in toolbar -->
+    <toolbar>
+      <button name="printBtn" title="Print sale orders" icon="fa-print"
+              onClick="action-sale-order-method-show-sale-order"/>
+
+      <button name="exportBtn" title="Export to Excel" icon="fa-file-excel-o"
+              onClick="action-sale-order-method-export-excel"/>
+
+      <button name="emailBtn" title="Send by email" icon="fa-envelope"
+              onClick="action-send-by-email-with-template"/>
+    </toolbar>
+
+    <field name="saleOrderSeq"/>
+    <field name="partner"/>
+    <field name="statusSelect"/>
+    <field name="inTaxTotal"/>
+
+  </grid>
+
+  <!--
+  BEST PRACTICE:
+  - Limit to 2-4 buttons (avoid clutter)
+  - Left-to-right priority (most important first)
+  - Use icons that convey action clearly
+  - Common toolbar actions: Print, Export, Email, Create
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Simple Menubar in Grid (Single Menu) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="sale-order-grid-menubar" title="Sale orders"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <!-- PATTERN: Single menu with multiple items -->
+    <menubar>
+      <menu name="saleOrderToolsMenu" title="Tools" icon="fa-wrench" showTitle="true">
+        <item name="seeSaleOrderLinesItem" title="See sale orders lines"
+              action="action-view-open-sale-order-lines"/>
+
+        <item name="computeMarginsItem" title="Compute margins"
+              action="action-sale-order-method-compute-margins"/>
+
+        <item name="generateReportItem" title="Generate analysis report"
+              action="action-sale-order-method-generate-report"/>
+      </menu>
+    </menubar>
+
+    <field name="saleOrderSeq"/>
+    <field name="partner"/>
+    <field name="statusSelect"/>
+
+  </grid>
+
+  <!--
+  EXPLANATION:
+  - Menubar: Dropdown menus for secondary actions
+  - Menu attributes:
+    - name: Unique identifier
+    - title: Display text
+    - icon: Font Awesome icon
+    - showTitle: true (show text + icon) or false (icon only)
+  - Item attributes:
+    - name: Unique identifier (optional)
+    - title: Display text
+    - action: Action to execute
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Toolbar + Menubar Combined (Grid) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="invoice-grid-combined" title="Invoices"
+        model="com.axelor.apps.account.db.Invoice"
+        orderBy="-invoiceDate">
+
+    <!-- PATTERN: Toolbar for primary action -->
+    <toolbar>
+      <button name="printBtn" title="Print invoices"
+              onClick="action-invoice-method-show-invoice" icon="fa-print"/>
+    </toolbar>
+
+    <!-- PATTERN: Menubar for batch/tool actions -->
+    <menubar>
+      <menu name="invoiceToolsMenu" title="Tools" icon="fa-wrench" showTitle="true">
+        <!-- PATTERN: Item with confirmation prompt -->
+        <item name="validateSelectedInvoicesItem"
+              title="Validate selected invoices"
+              action="action-invoice-method-mass-validation"
+              prompt="Are you sure you want to validate all selected invoices ?"/>
+
+        <!-- PATTERN: Item with conditional visibility -->
+        <item name="ventilateSelectedInvoicesItem"
+              title="Ventilate selected invoices"
+              action="action-invoice-method-mass-ventilation"
+              prompt="Are you sure you want to ventilate all selected invoices ?"
+              if="!__config__.app.getApp('invoice')?.isVentilationSkipped"/>
+
+        <item name="mergeCustInvoicesItem"
+              title="Merge Cust. Invoices"
+              action="action-invoice-method-convert-selected-lines-to-merge-lines"/>
+
+        <item name="seeCustInvoicesLinesItem"
+              title="See cust. invoices lines"
+              action="action-customer-invoice-line-menu"/>
+      </menu>
+    </menubar>
+
+    <field name="invoiceId"/>
+    <field name="partner"/>
+    <field name="invoiceDate"/>
+    <field name="statusSelect"/>
+    <field name="inTaxTotal"/>
+
+  </grid>
+
+  <!--
+  DESIGN PATTERN:
+  - Toolbar: Single most frequent action (Print)
+  - Menubar: Less frequent batch operations (Validate, Merge)
+  - Prompt: Confirmation for destructive/batch actions
+  - Conditional items: Show only when feature enabled
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Multiple Menus in Menubar -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="invoice-grid-multiple-menus" title="Invoices"
+        model="com.axelor.apps.account.db.Invoice">
+
+    <toolbar>
+      <button name="printBtn" title="Print" icon="fa-print"
+              onClick="action-invoice-method-show-invoice"/>
+    </toolbar>
+
+    <!-- PATTERN: Multiple menu groups for different action categories -->
+    <menubar>
+      <!-- Menu 1: Batch operations -->
+      <menu name="invoiceBatchMenu" title="Batch" icon="fa-tasks" showTitle="true">
+        <item name="validateBatchItem" title="Validate selected"
+              action="action-invoice-method-mass-validation"
+              prompt="Are you sure you want to validate all selected invoices ?"/>
+
+        <item name="ventilateBatchItem" title="Ventilate selected"
+              action="action-invoice-method-mass-ventilation"
+              prompt="Are you sure you want to ventilate all selected invoices ?"/>
+
+        <item name="cancelBatchItem" title="Cancel selected"
+              action="action-invoice-method-mass-cancellation"
+              prompt="Are you sure you want to cancel all selected invoices ?"/>
+      </menu>
+
+      <!-- Menu 2: Reports and exports -->
+      <menu name="invoiceExportsMenu" title="Export" icon="fa-download" showTitle="true">
+        <item name="exportExcelItem" title="Export to Excel"
+              action="action-invoice-method-export-excel"/>
+
+        <item name="exportPdfItem" title="Export to PDF"
+              action="action-invoice-method-export-pdf"/>
+
+        <item name="exportCsvItem" title="Export to CSV"
+              action="action-invoice-method-export-csv"/>
+      </menu>
+
+      <!-- Menu 3: Tools -->
+      <menu name="invoiceToolsMenu" title="Tools" icon="fa-wrench" showTitle="true">
+        <item name="mergeInvoicesItem" title="Merge invoices"
+              action="action-invoice-method-convert-selected-lines-to-merge-lines"/>
+
+        <item name="seeInvoiceLinesItem" title="See invoice lines"
+              action="action-customer-invoice-line-menu"/>
+
+        <item name="recalculateTotalsItem" title="Recalculate totals"
+              action="action-invoice-method-recalculate-totals"/>
+      </menu>
+    </menubar>
+
+    <field name="invoiceId"/>
+    <field name="statusSelect"/>
+    <field name="inTaxTotal"/>
+
+  </grid>
+
+  <!--
+  ORGANIZATION:
+  - Group related actions in separate menus
+  - Common groups:
+    - Batch: Mass operations (validate, cancel, update)
+    - Export: Different export formats (Excel, PDF, CSV)
+    - Tools: Utilities (merge, recalculate, view details)
+  - Use showTitle=true for clarity
+  - Consistent icons per category (tasks, download, wrench)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 6: Form with Menubar -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="opportunity-form-menubar" title="Opportunity"
+        model="com.axelor.apps.crm.db.Opportunity">
+
+    <!-- PATTERN: Menubar in form for secondary actions -->
+    <menubar>
+      <menu name="opportunityToolsMenu" title="Tools" showTitle="true" icon="fa-wrench">
+        <!-- PATTERN: Item with conditional module check -->
+        <item name="convertIntoQuotationItem"
+              if="__config__.app.isApp('sale')" if-module="axelor-sale"
+              title="Create a quotation"
+              action="save,action-sale-group-generate-sale-order"/>
+
+        <!-- PATTERN: Item with save action chain -->
+        <item title="Schedule Event"
+              action="save,action-opportunity-view-schedule-event"/>
+
+        <!-- PATTERN: Item with help text -->
+        <item name="convertToCustomerItem" title="Convert to Customer"
+              action="save,action-opportunity-method-convert-to-customer"
+              help="Convert this opportunity's partner to a customer"/>
+      </menu>
+    </menubar>
+
+    <panel name="mainPanel">
+      <field name="name"/>
+      <field name="amount"/>
+      <field name="partner"/>
+    </panel>
+
+  </form>
+
+  <!--
+  FORM MENUBAR PATTERN:
+  - Use for actions that don't fit in sidebars or panels
+  - Common actions: Generate related records, conversions, wizards
+  - Always use "save," prefix if action needs saved data
+  - help attribute for tooltips on hover
+  - if + if-module for cross-module features
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 7: Form with Multiple Menus in Menubar -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="manuf-order-form-menubar" title="Manufacturing order"
+        model="com.axelor.apps.production.db.ManufOrder">
+
+    <!-- PATTERN: Three distinct menu groups -->
+    <menubar>
+      <!-- Menu 1: Reports -->
+      <menu name="manufOrderReportsMenu" title="Reports"
+            icon="fa-files-o" showTitle="true">
+        <item name="printProductionProcessItem" title="Print Production Process"
+              action="save,action-production-process-method-print"/>
+
+        <item name="printWorkCenterLoadItem" title="Print Work Center Load"
+              action="save,action-work-center-load-method-print"/>
+
+        <item name="printBarcodeLabelsItem" title="Print Barcode Labels"
+              action="save,action-manuf-order-method-print-barcode-labels"/>
+
+        <item name="printCostSheetItem" title="Print Cost Sheet"
+              action="save,action-cost-sheet-method-print"/>
+      </menu>
+
+      <!-- Menu 2: Tools -->
+      <menu name="manufOrderToolsMenu" title="Tools"
+            icon="fa-wrench" showTitle="true">
+        <!-- PATTERN: Item with showIf (runtime condition) -->
+        <item name="generateWasteItem" title="Generate Waste Declaration"
+              action="save,action-manuf-order-method-generate-waste"
+              showIf="statusSelect == 6"/>
+
+        <item name="mergeOrdersItem" title="Merge with Other Orders"
+              action="action-manuf-order-view-merge-wizard"/>
+
+        <item name="splitOrderItem" title="Split Order"
+              action="save,action-manuf-order-view-split-wizard"
+              showIf="statusSelect &lt; 4"/>
+
+        <item name="updateCostsItem" title="Update Costs"
+              action="save,action-manuf-order-method-update-costs"/>
+      </menu>
+
+      <!-- Menu 3: More actions (icon only) -->
+      <menu name="manufOrderMoreMenu" title="More"
+            icon="fa-ellipsis-v" showTitle="false">
+        <item name="duplicateItem" title="Duplicate Order"
+              action="save,action-manuf-order-method-duplicate"/>
+
+        <item name="archiveItem" title="Archive"
+              action="action-manuf-order-method-archive"
+              showIf="statusSelect >= 6"/>
+
+        <item name="exportDataItem" title="Export Data"
+              action="action-manuf-order-method-export-data"/>
+      </menu>
+    </menubar>
+
+    <panel name="mainPanel">
+      <field name="manufOrderSeq"/>
+      <field name="product"/>
+      <field name="statusSelect"/>
+    </panel>
+
+  </form>
+
+  <!--
+  ADVANCED PATTERN:
+  - Reports menu: All print/export actions
+  - Tools menu: Utilities and generators
+  - More menu: Less common actions (showTitle=false for compact)
+  - showIf: Runtime condition based on record state
+  - Ellipsis icon (fa-ellipsis-v) for "More" actions
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 8: Toolbar with Conditional Buttons -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="opportunity-grid-conditional" title="Opportunities"
+        model="com.axelor.apps.crm.db.Opportunity">
+
+    <!-- PATTERN: Toolbar button with controller method call -->
+    <toolbar>
+      <button name="grabOpportunityBtn" icon="fa-suitcase" title="Take charge"
+              help="Assign selected opportunities to me"
+              onClick="com.axelor.apps.crm.web.OpportunityController:assignToMe"/>
+    </toolbar>
+
+    <field name="name"/>
+    <field name="partner"/>
+    <field name="amount"/>
+    <field name="user"/>
+
+  </grid>
+
+  <!--
+  PATTERN:
+  - Toolbar button calling Java controller method
+  - Syntax: "com.package.Controller:methodName"
+  - help attribute for tooltip
+  - Button operates on selected rows
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 9: Menu Items with Prompts and Conditions -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="sale-order-grid-advanced" title="Sale orders"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <menubar>
+      <menu name="saleOrderActionsMenu" title="Actions" icon="fa-bolt" showTitle="true">
+        <!-- PATTERN: Prompt with clear question -->
+        <item name="confirmSelectedItem" title="Confirm selected orders"
+              action="action-sale-order-method-confirm-selected"
+              prompt="Are you sure you want to confirm all selected orders ?"/>
+
+        <!-- PATTERN: Multiple conditions (if + showIf equivalent) -->
+        <item name="generateInvoicesItem" title="Generate invoices"
+              if="__config__.app.isApp('account')"
+              action="action-sale-order-method-generate-invoices"
+              prompt="Generate invoices for all selected orders ?"/>
+
+        <!-- PATTERN: No prompt for non-destructive action -->
+        <item name="exportOrdersItem" title="Export orders"
+              action="action-sale-order-method-export-selected"/>
+
+        <!-- PATTERN: Prompt for cancellation (destructive) -->
+        <item name="cancelSelectedItem" title="Cancel selected orders"
+              action="action-sale-order-method-cancel-selected"
+              prompt="Are you sure you want to cancel all selected orders ? This action cannot be undone."/>
+      </menu>
+    </menubar>
+
+    <field name="saleOrderSeq"/>
+    <field name="statusSelect"/>
+    <field name="inTaxTotal"/>
+
+  </grid>
+
+  <!--
+  PROMPT USAGE:
+  - Always use for destructive actions (delete, cancel, archive)
+  - Use for batch operations affecting multiple records
+  - Use for state changes (confirm, validate, finalize)
+  - Skip for read-only actions (export, view, print)
+  - Question format: "Are you sure...?" or "Do you want...?"
+  - Warn about irreversibility: "This action cannot be undone."
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 10: Icon-Only Menus (Compact Layout) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="partner-grid-compact" title="Partners"
+        model="com.axelor.apps.base.db.Partner">
+
+    <toolbar>
+      <button name="printBtn" title="Print" icon="fa-print"
+              onClick="action-partner-method-print"/>
+    </toolbar>
+
+    <!-- PATTERN: Icon-only menus for compact UI -->
+    <menubar>
+      <!-- Print menu (icon only) -->
+      <menu name="printMenu" title="Print" icon="fa-print" showTitle="false">
+        <item name="printLabelsItem" title="Print address labels"
+              action="action-partner-method-print-labels"/>
+        <item name="printCatalogItem" title="Print catalog"
+              action="action-partner-method-print-catalog"/>
+      </menu>
+
+      <!-- Export menu (icon only) -->
+      <menu name="exportMenu" title="Export" icon="fa-download" showTitle="false">
+        <item name="exportExcelItem" title="Export to Excel"
+              action="action-partner-method-export-excel"/>
+        <item name="exportVCardItem" title="Export vCards"
+              action="action-partner-method-export-vcard"/>
+      </menu>
+
+      <!-- Tools menu (icon only) -->
+      <menu name="toolsMenu" title="Tools" icon="fa-wrench" showTitle="false">
+        <item name="mergePartnersItem" title="Merge partners"
+              action="action-partner-view-merge-wizard"/>
+        <item name="deduplicateItem" title="Find duplicates"
+              action="action-partner-view-deduplicate"/>
+      </menu>
+
+      <!-- More menu (icon only) -->
+      <menu name="moreMenu" title="More" icon="fa-ellipsis-v" showTitle="false">
+        <item name="archiveItem" title="Archive selected"
+              action="action-partner-method-archive-selected"
+              prompt="Are you sure you want to archive all selected partners ?"/>
+      </menu>
+    </menubar>
+
+    <field name="fullName"/>
+    <field name="emailAddress"/>
+    <field name="isCustomer"/>
+    <field name="isSupplier"/>
+
+  </grid>
+
+  <!--
+  COMPACT LAYOUT PATTERN:
+  - showTitle="false" for all menus
+  - Shows only icons (saves horizontal space)
+  - Use distinctive icons (print, download, wrench, ellipsis)
+  - Items still show full title text
+  - Good for grids with many menus (4+)
+  - Mobile-friendly
+  -->
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **Toolbar vs Menubar**:
+   - **Toolbar**: 1-4 most important actions (print, export, email)
+   - **Menubar**: Secondary actions grouped by category (tools, batch, reports)
+   - Can use both: Toolbar for primary, Menubar for secondary
+   - Toolbar buttons always visible, Menubar actions in dropdowns
+
+2. **Toolbar Design**:
+   - Position: Top of grid/form
+   - Button limit: 2-4 buttons (avoid clutter)
+   - Priority: Left to right (most important first)
+   - Icons: Font Awesome (fa-print, fa-envelope, fa-download)
+   - title: Button text or tooltip
+   - onClick: Action or action chain
+
+3. **Menubar Design**:
+   - Position: Top of grid/form (below toolbar if both present)
+   - Structure: <menubar> > <menu> > <item>
+   - Menu: Dropdown group with title and icon
+   - Item: Individual action within menu
+   - Menus: 2-5 recommended (batch, export, tools, reports, more)
+
+4. **Menu Attributes**:
+   - **name**: Unique identifier
+   - **title**: Display text (menu label)
+   - **icon**: Font Awesome icon (fa-wrench, fa-tasks, fa-download)
+   - **showTitle**: true (show text+icon) or false (icon only)
+   - showTitle=true: Good for clarity (2-3 menus)
+   - showTitle=false: Compact layout (4+ menus)
+
+5. **Item Attributes**:
+   - **name**: Unique identifier (optional)
+   - **title**: Display text (action label)
+   - **action**: Action to execute (comma-separated chain)
+   - **prompt**: Confirmation dialog text
+   - **if**: Compile-time condition (module check)
+   - **if-module**: Module dependency check
+   - **showIf**: Runtime condition (field values)
+   - **help**: Tooltip text (on hover)
+
+6. **Action Patterns**:
+   - Simple: "action-method-name"
+   - With save: "save,action-method-name"
+   - Chain: "save,action1,action2,action3"
+   - Controller: "com.package.Controller:methodName"
+   - View: "action-view-name"
+
+7. **Prompt Usage**:
+   - Use for: Destructive actions, batch operations, state changes
+   - Skip for: Exports, prints, view opens (non-destructive)
+   - Format: Clear question ("Are you sure...?")
+   - Warning: Add "This action cannot be undone" for irreversible actions
+   - Buttons: OK (executes) / Cancel (stops)
+
+8. **Conditional Visibility**:
+   - **if**: Module or app config check (compile-time)
+     - Example: if="__config__.app.isApp('sale')"
+     - Example: if="__user__.hasRole('admin')"
+   - **if-module**: Module installed check
+     - Example: if-module="axelor-sale"
+   - **showIf**: Record state check (runtime)
+     - Example: showIf="statusSelect == 3"
+     - Example: showIf="statusSelect &lt; 4 &amp;&amp; !invoiced"
+   - Can combine: if + if-module, if + showIf
+
+9. **Icon Selection**:
+   - **Print/Reports**: fa-print, fa-files-o, fa-file-pdf-o
+   - **Export**: fa-download, fa-file-excel-o, fa-database
+   - **Tools**: fa-wrench, fa-cog, fa-cogs
+   - **Actions**: fa-bolt, fa-flash, fa-play
+   - **Batch**: fa-tasks, fa-list-ul
+   - **More**: fa-ellipsis-v (vertical), fa-ellipsis-h (horizontal)
+   - **Email**: fa-envelope, fa-envelope-o
+   - **Create**: fa-plus, fa-plus-circle
+   - Use consistent icons across application
+
+10. **Menu Organization**:
+    - **Batch menu**: Mass operations (validate all, cancel all, update all)
+    - **Export menu**: Different formats (Excel, PDF, CSV)
+    - **Reports menu**: Print operations (documents, labels, lists)
+    - **Tools menu**: Utilities (merge, split, calculate, generate)
+    - **More menu**: Uncommon actions (duplicate, archive, advanced)
+
+11. **Compact Layout** (Icon-Only):
+    - Set showTitle="false" on all menus
+    - Shows only icons (saves space)
+    - Good for: Mobile, narrow screens, many menus (4+)
+    - Choose distinctive icons
+    - Items still show full title text
+
+12. **Best Practices**:
+    - Toolbar: 1 button ideal, max 4
+    - Menubar: 2-3 menus optimal, max 5
+    - Items per menu: 3-7 optimal, max 10
+    - Save first: Use "save," prefix for actions needing data
+    - Prompt: Always for destructive/batch actions
+    - Icons: Consistent across similar actions
+    - Naming: descriptive (printBtn, exportExcelItem)
+    - Help text: Add for non-obvious actions
+    - Grouping: Related actions in same menu
+
+13. **Performance**:
+    - Toolbar buttons: Always loaded (keep few)
+    - Menubar items: Loaded on menu click (can have more)
+    - Conditional items: Evaluated on menu open
+    - Controller methods: Good for complex logic
+    - Action chains: Avoid too many steps (max 3-4)
+
+14. **Common Mistakes**:
+    - Too many toolbar buttons (>4) - use menubar instead
+    - No prompts for destructive actions - users may click by accident
+    - Forgetting "save," prefix - action fails without data
+    - showTitle=true with many menus - too wide
+    - Generic icons (fa-star) - use semantic icons
+    - No grouping - random item order
+
+15. **Form vs Grid Usage**:
+    - **Grid toolbar**: Batch actions on selected rows
+    - **Grid menubar**: Tools for multiple records
+    - **Form menubar**: Actions related to current record
+    - **Form toolbar**: Rare (use sidebar buttons instead)
+    - Grid: More likely to have toolbar + menubar
+    - Form: Typically only menubar
+
+16. **Mobile Considerations**:
+    - Icon-only menus (showTitle=false)
+    - Fewer menus (max 3-4 on mobile)
+    - Clear icons (recognizable at small size)
+    - Short menu titles (if shown)
+    - Avoid long action chains (performance)
+
+17. **Integration Patterns**:
+    - Toolbar + Menubar: Primary action in toolbar, rest in menubar
+    - Multiple menus: Group by action type (batch, export, tools)
+    - Conditional items: Show/hide based on state or modules
+    - Prompts: Confirm before executing
+    - Save chains: Ensure data persisted before action
+    - Controller methods: Complex logic in Java
+-->

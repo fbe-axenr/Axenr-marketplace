@@ -1,0 +1,598 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Cards View with JSX Templates and Rich Layouts
+SOURCE: axelor-open-suite/axelor-sale/SaleOrder.xml + axelor-base/Partner.xml
+BEST PRACTICE: Using template element with CDATA JSX for custom card rendering
+CONTEXT: List views requiring rich visual representation with images, badges, and custom layouts
+KEY PATTERNS:
+- cards view with template element
+- CDATA sections with JSX/React syntax
+- Box/Flexbox layouts for card structure
+- Badge components for status indicators
+- Image rendering with fallback icons
+- Conditional rendering with {condition && <Element/>}
+- Format functions ($fmt, $image, $moment)
+- CSS utility classes (flexbox, spacing, colors)
+- Responsive card layouts
+- Icon integration (Font Awesome)
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Basic Cards View with Simple Template -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <cards name="partner-cards" title="Partners" model="com.axelor.apps.base.db.Partner"
+         orderBy="name" width="250px">
+
+    <!-- PATTERN: Template with CDATA for JSX rendering -->
+    <template><![CDATA[
+      <>
+        <Box d="flex" alignItems="center" gap={2} p={2}>
+          {/* PATTERN: Image with fallback icon */}
+          {picture ? (
+            <img src={$image('picture', picture.id)} alt={fullName}
+                 style={{width: 50, height: 50, borderRadius: '50%'}}/>
+          ) : (
+            <Box as="i" className="fa fa-user-circle fa-3x" color="secondary"/>
+          )}
+
+          <Box flex={1}>
+            {/* PATTERN: Title with bold styling */}
+            <Box fontWeight="bold" fontSize={4}>{fullName}</Box>
+
+            {/* PATTERN: Subtitle with secondary color */}
+            <Box color="secondary" fontSize={3}>
+              {partnerCategory && partnerCategory.name}
+            </Box>
+
+            {/* PATTERN: Conditional badge rendering */}
+            {isCustomer && <Badge bg="success" me={1}>Customer</Badge>}
+            {isSupplier && <Badge bg="primary">Supplier</Badge>}
+          </Box>
+        </Box>
+      </>
+    ]]></template>
+
+    <field name="picture"/>
+    <field name="fullName"/>
+    <field name="partnerCategory"/>
+    <field name="isCustomer"/>
+    <field name="isSupplier"/>
+  </cards>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Complex Cards with Rich Layout -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <cards name="sale-order-cards" title="Sale Orders"
+         model="com.axelor.apps.sale.db.SaleOrder"
+         orderBy="-createdOn" width="320px">
+
+    <template><![CDATA[
+      <>
+        <Box p={3}>
+          {/* PATTERN: Header with status badge and date */}
+          <Box d="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Box fontWeight="bold" fontSize={5}>{saleOrderSeq || 'Draft'}</Box>
+            <Badge bg={
+              statusSelect === 1 ? 'secondary' :
+              statusSelect === 3 ? 'success' :
+              statusSelect === 4 ? 'primary' :
+              statusSelect === 5 ? 'danger' : 'light'
+            }>
+              {$fmt('statusSelect')}
+            </Badge>
+          </Box>
+
+          {/* PATTERN: Customer info with icon */}
+          <Box d="flex" alignItems="center" gap={2} mb={2}>
+            <Box as="i" className="fa fa-building" color="secondary"/>
+            <Box flex={1}>
+              <Box fontWeight="bold">{partner && partner.fullName}</Box>
+              <Box fontSize={2} color="secondary">
+                {partner && partner.emailAddress && partner.emailAddress.address}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* PATTERN: Grid layout for metrics */}
+          <Box d="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={2}
+               p={2} bg="light" borderRadius="md">
+            <Box>
+              <Box fontSize={2} color="secondary">Date</Box>
+              <Box fontWeight="bold">{$fmt('orderDate')}</Box>
+            </Box>
+            <Box>
+              <Box fontSize={2} color="secondary">Delivery</Box>
+              <Box fontWeight="bold">{$fmt('deliveryDate')}</Box>
+            </Box>
+          </Box>
+
+          {/* PATTERN: Amount display with currency */}
+          <Box d="flex" justifyContent="space-between" alignItems="center"
+               borderTop p={2}>
+            <Box fontSize={3} color="secondary">Total Amount</Box>
+            <Box fontWeight="bold" fontSize={5} color="success">
+              {$fmt('inTaxTotal')}
+            </Box>
+          </Box>
+
+          {/* PATTERN: Conditional warning/info sections */}
+          {urgentDelivery && (
+            <Box bg="warning" color="white" p={2} borderRadius="md" mt={2}>
+              <Box as="i" className="fa fa-exclamation-triangle" me={1}/>
+              Urgent Delivery Required
+            </Box>
+          )}
+
+          {/* PATTERN: Footer with action icons */}
+          <Box d="flex" gap={2} mt={2} pt={2} borderTop>
+            <Box as="i" className="fa fa-file-text-o" color="secondary" title="View Details"/>
+            <Box as="i" className="fa fa-edit" color="primary" title="Edit"/>
+            {statusSelect < 3 && (
+              <Box as="i" className="fa fa-check" color="success" title="Confirm"/>
+            )}
+          </Box>
+        </Box>
+      </>
+    ]]></template>
+
+    <field name="saleOrderSeq"/>
+    <field name="statusSelect"/>
+    <field name="partner"/>
+    <field name="partner.fullName"/>
+    <field name="partner.emailAddress"/>
+    <field name="orderDate"/>
+    <field name="deliveryDate"/>
+    <field name="inTaxTotal"/>
+    <field name="urgentDelivery"/>
+    <field name="createdOn"/>
+  </cards>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Product Cards with Image and Specs -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <cards name="product-cards" title="Products"
+         model="com.axelor.apps.base.db.Product"
+         orderBy="name" width="280px">
+
+    <template><![CDATA[
+      <>
+        <Box>
+          {/* PATTERN: Hero image section */}
+          <Box position="relative" height={180} overflow="hidden" bg="light">
+            {picture ? (
+              <img src={$image('picture', picture.id)} alt={name}
+                   style={{width: '100%', height: '100%', objectFit: 'cover'}}/>
+            ) : (
+              <Box d="flex" alignItems="center" justifyContent="center"
+                   h="100%" color="secondary">
+                <Box as="i" className="fa fa-image fa-5x"/>
+              </Box>
+            )}
+
+            {/* PATTERN: Overlay badges */}
+            {!isActive && (
+              <Box position="absolute" top={2} right={2}>
+                <Badge bg="danger">Inactive</Badge>
+              </Box>
+            )}
+            {inStock === false && (
+              <Box position="absolute" top={2} left={2}>
+                <Badge bg="warning">Out of Stock</Badge>
+              </Box>
+            )}
+          </Box>
+
+          {/* PATTERN: Content section */}
+          <Box p={3}>
+            <Box fontWeight="bold" fontSize={4} mb={1}>{name}</Box>
+            <Box fontSize={2} color="secondary" mb={2}>{code}</Box>
+
+            {/* PATTERN: Category chips */}
+            <Box d="flex" gap={1} mb={2} flexWrap="wrap">
+              {productCategory && (
+                <Badge bg="primary" variant="outline">
+                  {productCategory.name}
+                </Badge>
+              )}
+              {productFamily && (
+                <Badge bg="info" variant="outline">
+                  {productFamily.name}
+                </Badge>
+              )}
+            </Box>
+
+            {/* PATTERN: Price grid */}
+            <Box d="grid" gridTemplateColumns="1fr 1fr" gap={2}
+                 borderTop borderBottom py={2} my={2}>
+              <Box>
+                <Box fontSize={2} color="secondary">Sale Price</Box>
+                <Box fontWeight="bold" color="success">
+                  {$fmt('salePrice')}
+                </Box>
+              </Box>
+              <Box>
+                <Box fontSize={2} color="secondary">Purchase</Box>
+                <Box fontWeight="bold" color="primary">
+                  {$fmt('purchasePrice')}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* PATTERN: Description truncation */}
+            {description && (
+              <Box fontSize={3} color="secondary"
+                   style={{
+                     overflow: 'hidden',
+                     textOverflow: 'ellipsis',
+                     display: '-webkit-box',
+                     WebkitLineClamp: 2,
+                     WebkitBoxOrient: 'vertical'
+                   }}>
+                {description}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </>
+    ]]></template>
+
+    <field name="name"/>
+    <field name="code"/>
+    <field name="picture"/>
+    <field name="description"/>
+    <field name="salePrice"/>
+    <field name="purchasePrice"/>
+    <field name="productCategory"/>
+    <field name="productFamily"/>
+    <field name="isActive"/>
+    <field name="inStock"/>
+  </cards>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Timeline Cards (Activity/Events) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <cards name="event-cards" title="Events"
+         model="com.axelor.apps.crm.db.Event"
+         orderBy="-startDateTime" width="300px">
+
+    <template><![CDATA[
+      <>
+        <Box p={3} borderLeft="4px solid" borderColor={
+          typeSelect === 1 ? 'primary' :
+          typeSelect === 2 ? 'success' :
+          typeSelect === 3 ? 'info' : 'secondary'
+        }>
+          {/* PATTERN: Header with icon and type */}
+          <Box d="flex" alignItems="center" gap={2} mb={2}>
+            <Box as="i" className={
+              typeSelect === 1 ? 'fa fa-calendar' :
+              typeSelect === 2 ? 'fa fa-phone' :
+              typeSelect === 3 ? 'fa fa-users' : 'fa fa-clock-o'
+            } fontSize={5} color={
+              typeSelect === 1 ? 'primary' :
+              typeSelect === 2 ? 'success' :
+              typeSelect === 3 ? 'info' : 'secondary'
+            }/>
+
+            <Box flex={1}>
+              <Badge bg={
+                typeSelect === 1 ? 'primary' :
+                typeSelect === 2 ? 'success' :
+                typeSelect === 3 ? 'info' : 'secondary'
+              } mb={1}>
+                {$fmt('typeSelect')}
+              </Badge>
+              <Box fontWeight="bold" fontSize={4}>{subject}</Box>
+            </Box>
+          </Box>
+
+          {/* PATTERN: Date/Time with relative formatting */}
+          <Box d="flex" alignItems="center" gap={2} mb={2}
+               p={2} bg="light" borderRadius="md">
+            <Box as="i" className="fa fa-clock-o" color="secondary"/>
+            <Box flex={1}>
+              <Box fontWeight="bold">{$fmt('startDateTime')}</Box>
+              <Box fontSize={2} color="secondary">
+                {$moment(startDateTime).fromNow()}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* PATTERN: Participant avatars */}
+          {attendees && attendees.length > 0 && (
+            <Box mb={2}>
+              <Box fontSize={2} color="secondary" mb={1}>Participants</Box>
+              <Box d="flex" gap={1}>
+                {attendees.slice(0, 3).map(attendee => (
+                  <Box key={attendee.id} title={attendee.fullName}>
+                    {attendee.picture ? (
+                      <img src={$image('picture', attendee.picture.id)}
+                           alt={attendee.fullName}
+                           style={{width: 30, height: 30, borderRadius: '50%'}}/>
+                    ) : (
+                      <Box as="i" className="fa fa-user-circle fa-2x" color="secondary"/>
+                    )}
+                  </Box>
+                ))}
+                {attendees.length > 3 && (
+                  <Box d="flex" alignItems="center" justifyContent="center"
+                       bg="secondary" color="white" borderRadius="50%"
+                       style={{width: 30, height: 30}} fontSize={2}>
+                    +{attendees.length - 3}
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          )}
+
+          {/* PATTERN: Related entity link */}
+          {lead && (
+            <Box d="flex" alignItems="center" gap={2} p={2} bg="light" borderRadius="md">
+              <Box as="i" className="fa fa-link" color="secondary"/>
+              <Box flex={1}>
+                <Box fontSize={2} color="secondary">Related To</Box>
+                <Box fontWeight="bold">{lead.fullName}</Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* PATTERN: Status indicator with color */}
+          <Box d="flex" justifyContent="space-between" alignItems="center" mt={2} pt={2} borderTop>
+            <Box fontSize={3} color="secondary">Status</Box>
+            <Badge bg={
+              statusSelect === 1 ? 'warning' :
+              statusSelect === 2 ? 'success' :
+              statusSelect === 3 ? 'danger' : 'secondary'
+            }>
+              {$fmt('statusSelect')}
+            </Badge>
+          </Box>
+        </Box>
+      </>
+    ]]></template>
+
+    <field name="subject"/>
+    <field name="typeSelect"/>
+    <field name="statusSelect"/>
+    <field name="startDateTime"/>
+    <field name="attendees"/>
+    <field name="lead"/>
+  </cards>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Kanban-Style Cards with Actions -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <cards name="opportunity-cards" title="Opportunities"
+         model="com.axelor.apps.crm.db.Opportunity"
+         orderBy="-expectedCloseDate" width="300px">
+
+    <template><![CDATA[
+      <>
+        <Box p={3} bg="white" borderRadius="lg" boxShadow="sm" border>
+          {/* PATTERN: Draggable card indicator */}
+          <Box d="flex" justifyContent="center" mb={2} opacity={0.3}>
+            <Box as="i" className="fa fa-ellipsis-h"/>
+          </Box>
+
+          {/* PATTERN: Priority indicator stripe */}
+          <Box h={4} bg={
+            $get('priority.technicalTypeSelect') === 4 ? 'danger' :
+            $get('priority.technicalTypeSelect') === 3 ? 'warning' :
+            $get('priority.technicalTypeSelect') === 2 ? 'info' : 'light'
+          } borderRadius="md" mb={2}/>
+
+          {/* PATTERN: Title and company */}
+          <Box mb={2}>
+            <Box fontWeight="bold" fontSize={4} mb={1}>{name}</Box>
+            {partner && (
+              <Box d="flex" alignItems="center" gap={1} color="secondary">
+                <Box as="i" className="fa fa-building" fontSize={2}/>
+                <Box fontSize={3}>{partner.fullName}</Box>
+              </Box>
+            )}
+          </Box>
+
+          {/* PATTERN: Metrics grid */}
+          <Box d="grid" gridTemplateColumns="1fr 1fr" gap={2} mb={2}>
+            <Box p={2} bg="light" borderRadius="md">
+              <Box fontSize={2} color="secondary" mb={1}>Amount</Box>
+              <Box fontWeight="bold" fontSize={4} color="success">
+                {$fmt('amount')}
+              </Box>
+            </Box>
+            <Box p={2} bg="light" borderRadius="md">
+              <Box fontSize={2} color="secondary" mb={1}>Probability</Box>
+              <Box fontWeight="bold" fontSize={4} color="primary">
+                {salesStageSelect && salesStageSelect.probability}%
+              </Box>
+            </Box>
+          </Box>
+
+          {/* PATTERN: Expected close date with countdown */}
+          {expectedCloseDate && (
+            <Box d="flex" alignItems="center" justifyContent="space-between"
+                 p={2} bg={
+                   $moment(expectedCloseDate).diff($moment(), 'days') < 7 ? 'danger' :
+                   $moment(expectedCloseDate).diff($moment(), 'days') < 30 ? 'warning' : 'light'
+                 } color={
+                   $moment(expectedCloseDate).diff($moment(), 'days') < 30 ? 'white' : 'dark'
+                 } borderRadius="md" mb={2}>
+              <Box d="flex" alignItems="center" gap={2}>
+                <Box as="i" className="fa fa-calendar"/>
+                <Box fontSize={3}>{$fmt('expectedCloseDate')}</Box>
+              </Box>
+              <Box fontWeight="bold">
+                {$moment(expectedCloseDate).fromNow()}
+              </Box>
+            </Box>
+          )}
+
+          {/* PATTERN: Assigned user avatar and name */}
+          {user && (
+            <Box d="flex" alignItems="center" gap={2} mb={2}>
+              {user.image ? (
+                <img src={$image('image', user.image.id)} alt={user.fullName}
+                     style={{width: 24, height: 24, borderRadius: '50%'}}/>
+              ) : (
+                <Box as="i" className="fa fa-user-circle" fontSize={4} color="secondary"/>
+              )}
+              <Box fontSize={3} color="secondary">{user.fullName}</Box>
+            </Box>
+          )}
+
+          {/* PATTERN: Action buttons footer */}
+          <Box d="flex" gap={2} pt={2} borderTop>
+            <Box flex={1} textAlign="center" p={1} borderRadius="md"
+                 bg="light" cursor="pointer" title="View Details">
+              <Box as="i" className="fa fa-eye"/>
+            </Box>
+            <Box flex={1} textAlign="center" p={1} borderRadius="md"
+                 bg="light" cursor="pointer" title="Edit">
+              <Box as="i" className="fa fa-edit"/>
+            </Box>
+            {bestCase && (
+              <Box flex={1} textAlign="center" p={1} borderRadius="md"
+                   bg="success" color="white" cursor="pointer" title="Best Case">
+                <Box as="i" className="fa fa-star"/>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </>
+    ]]></template>
+
+    <field name="name"/>
+    <field name="partner"/>
+    <field name="amount"/>
+    <field name="expectedCloseDate"/>
+    <field name="salesStageSelect"/>
+    <field name="priority"/>
+    <field name="user"/>
+    <field name="bestCase"/>
+  </cards>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **Cards View Structure**:
+   - <cards> element with name, title, model, orderBy, width
+   - <template> with CDATA containing JSX
+   - <field> declarations for all referenced fields
+   - Width: typically 250px-400px depending on content density
+
+2. **JSX Template Syntax**:
+   - Wrapped in <![CDATA[<>...</>]]>
+   - React-like JSX with curly braces for expressions
+   - Field access: {fieldName}, {relatedField.subField}
+   - Conditional rendering: {condition && <Element/>}
+   - Ternary operators: {condition ? 'value1' : 'value2'}
+
+3. **Box Component** (Primary Layout Tool):
+   - d: Display mode (flex, grid, block, inline)
+   - flexDirection, justifyContent, alignItems (flexbox)
+   - gridTemplateColumns, gap (grid)
+   - p, px, py, pt, pb, ps, pe: Padding (numeric scale 0-5)
+   - m, mx, my, mt, mb, ms, me: Margin
+   - bg: Background color (primary, secondary, success, danger, warning, info, light, dark, white)
+   - color: Text color
+   - fontSize: Font size (numeric scale 1-7)
+   - fontWeight: bold, normal
+   - borderRadius: sm, md, lg, or numeric
+   - border, borderTop, borderBottom, borderLeft, borderRight
+   - position: relative, absolute
+   - overflow: hidden, auto, scroll
+
+4. **Badge Component**:
+   - bg attribute: Color (primary, secondary, success, danger, warning, info, light, dark)
+   - variant: solid (default), outline
+   - Usage: Status indicators, tags, labels
+
+5. **Image Handling**:
+   - $image('fieldName', id): Generate image URL
+   - Fallback icons: {picture ? <img/> : <Box as="i" className="fa-icon"/>}
+   - Style object for sizing: style={{width: X, height: X}}
+   - borderRadius: '50%' for circular avatars
+   - objectFit: 'cover' for aspect ratio preservation
+
+6. **Format Functions**:
+   - $fmt('fieldName'): Format field according to type (date, number, selection)
+   - $image('fieldName', id): Image URL generator
+   - $moment(date): Moment.js for date manipulation
+     - .fromNow(): Relative time ("2 hours ago")
+     - .diff(otherDate, 'days'): Date difference
+     - .format('YYYY-MM-DD'): Custom formatting
+   - $get('fieldName'): Get field value (useful for nested access)
+
+7. **Conditional Styling**:
+   - Dynamic bg based on status: bg={status === 1 ? 'success' : 'danger'}
+   - Dynamic color: color={isActive ? 'primary' : 'secondary'}
+   - Conditional CSS classes: className={urgent ? 'urgent-class' : ''}
+   - Multi-condition ternary chains for complex logic
+
+8. **Layout Patterns**:
+   - **Header**: d="flex" justifyContent="space-between" alignItems="center"
+   - **Grid metrics**: d="grid" gridTemplateColumns="1fr 1fr" gap={2}
+   - **Avatar row**: d="flex" alignItems="center" gap={2}
+   - **Footer actions**: d="flex" gap={2} pt={2} borderTop
+   - **Overlay**: position="absolute" top={X} right={Y}
+   - **Centered**: d="flex" alignItems="center" justifyContent="center" h="100%"
+
+9. **Common UI Patterns**:
+   - **Hero image**: Full-width image with overlays
+   - **Avatar grid**: Multiple user avatars with +N overflow indicator
+   - **Metric cards**: Small boxes with label and value
+   - **Status badges**: Colored badges with dynamic colors
+   - **Icon indicators**: Font Awesome icons with semantic colors
+   - **Truncated text**: CSS for multi-line ellipsis (WebkitLineClamp)
+
+10. **Accessibility & UX**:
+    - title attribute for tooltips
+    - alt attribute for images
+    - Semantic icons (fa-user, fa-building, fa-calendar)
+    - Color coding for status (success=green, danger=red, warning=yellow)
+    - Hover states (cursor="pointer")
+    - Visual hierarchy (fontWeight, fontSize, color opacity)
+
+11. **Performance Best Practices**:
+    - Declare all accessed fields in <field> elements
+    - Use conditional rendering to avoid unnecessary DOM
+    - Limit array rendering (slice for large lists)
+    - Optimize image sizes
+    - Use borderRadius shorthand (md, lg) over numeric values
+
+12. **Font Awesome Integration**:
+    - Box as="i" className="fa fa-icon-name"
+    - Sizing: fa-2x, fa-3x, fa-4x, fa-5x or fontSize prop
+    - Color via color prop: color="primary", color="secondary"
+    - Common icons: fa-user, fa-building, fa-calendar, fa-phone, fa-envelope, fa-check, fa-times
+
+13. **Field Access Patterns**:
+    - Direct: {fieldName}
+    - Related: {partner.fullName}, {user.email}
+    - Nested: {partner && partner.emailAddress && partner.emailAddress.address}
+    - Selection: {$fmt('statusSelect')} for translated value
+    - Get helper: {$get('priority.technicalTypeSelect')}
+
+14. **Responsive Considerations**:
+    - width attribute on <cards> defines card width
+    - Cards auto-wrap in grid layout
+    - Use flex: 1 for flexible sizing
+    - Relative units (%, vh, vw) for scalability
+-->

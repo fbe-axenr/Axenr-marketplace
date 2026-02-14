@@ -1,0 +1,324 @@
+# Gitignore Templates
+# Common patterns to add to .gitignore for Axelor projects
+
+# === Java / Gradle / Maven ===
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Compiled class files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Exceptions (allow specific JARs in libs)
+!libs/**/*.jar
+
+# === IDE ===
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+.metadata
+
+# VSCode
+.vscode/
+*.code-workspace
+.history/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# === Editors ===
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw?
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# Sublime Text
+*.sublime-workspace
+
+# === Operating Systems ===
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.lnk
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# === Sensitive Data ===
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Credentials and secrets
+credentials.json
+credentials.yml
+credentials.yaml
+secrets.json
+secrets.yml
+secrets.yaml
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa
+id_dsa
+*.ppk
+
+# === Logs and Temporary Files ===
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+tmp/
+temp/
+
+# Cache
+*.cache
+.cache/
+.npm/
+.eslintcache
+
+# === Node.js (if used for frontend) ===
+
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.npm
+.eslintcache
+.node_repl_history
+.yarn-integrity
+
+# === Python (if used) ===
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# === Axelor Specific ===
+
+# Generated code markers
+.generated
+
+# Axelor logs
+axelor-*.log
+
+# Database files (if using embedded DB for development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Upload directories
+uploads/
+attachments/
+data/
+
+# === Version Control ===
+
+# Git
+*.orig
+*.rej
+
+# SVN
+.svn/
+
+# Mercurial
+.hg/
+.hgignore
+.hgtags
+
+# === Build Tools ===
+
+# Ant
+ant-build/
+build.xml.backup
+
+# CMake
+cmake-build-*/
+
+# === Testing ===
+
+# JUnit
+TEST-*.xml
+junit*.properties
+
+# JaCoCo
+jacoco*.exec
+jacoco.xml
+
+# === Documentation ===
+
+# Generated docs
+/docs/_build/
+/site/
+
+# === Miscellaneous ===
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Patches
+*.patch
+*.diff
+
+# === Custom Project Specific ===
+# Add your project-specific patterns below
+# Example:
+# custom-uploads/
+# project-specific-temp/
+
+
+# ========================================
+# MINIMAL TEMPLATE FOR AXELOR PROJECTS
+# ========================================
+# Copy the lines below for a quick start
+
+# Build
+.gradle/
+build/
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.settings/
+.project
+.classpath
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive
+.env
+*.pem
+*.key
+credentials.*
+secrets.*
+
+# Logs
+*.log

@@ -1,0 +1,220 @@
+# =============================================================================
+# Adjustment Factors - Multipliers by Profile
+# =============================================================================
+# These factors are applied to the calculated total to adjust the estimation
+# based on project context.
+#
+# Format: category -> adjustment -> {dev, qa, pm, description, when}
+# Values represent multipliers (0.30 = +30%)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TESTS
+# -----------------------------------------------------------------------------
+testing:
+  unit_tests:
+    dev: 0.30
+    qa: 0
+    pm: 0
+    description: "Thorough unit tests"
+    when: "Complex services, critical business logic"
+
+  integration_tests:
+    dev: 0
+    qa: 0.50
+    pm: 0
+    description: "Integration tests"
+    when: "Workflows, external integrations"
+
+  e2e_tests:
+    dev: 0
+    qa: 0.75
+    pm: 0
+    description: "Automated end-to-end tests"
+    when: "Critical user journeys"
+
+# -----------------------------------------------------------------------------
+# DOCUMENTATION
+# -----------------------------------------------------------------------------
+documentation:
+  user_docs:
+    dev: 0
+    qa: 0
+    pm: 0.20
+    description: "User documentation"
+    when: "Complex features, major new functionality"
+
+  technical_docs:
+    dev: 0.15
+    qa: 0
+    pm: 0
+    description: "Thorough technical documentation"
+    when: "APIs, integrations, complex architectures"
+
+  training_materials:
+    dev: 0
+    qa: 0
+    pm: 0.30
+    description: "Training materials"
+    when: "Major new features"
+
+# -----------------------------------------------------------------------------
+# TECHNICAL CONTEXT
+# -----------------------------------------------------------------------------
+context:
+  legacy_code:
+    dev: 0.25
+    qa: 0
+    pm: 0
+    description: "Technical debt / legacy code"
+    when: "Working on unfamiliar existing code"
+
+  new_tech:
+    dev: 0.50
+    qa: 0
+    pm: 0
+    description: "New technology / framework"
+    when: "Team discovering a new tool"
+
+  complex_architecture:
+    dev: 0.20
+    qa: 0.10
+    pm: 0.10
+    description: "Complex architecture"
+    when: "Multi-modules, microservices"
+
+  refactoring:
+    dev: 0.15
+    qa: 0.20
+    pm: 0
+    description: "Refactoring required"
+    when: "Code to restructure"
+
+# -----------------------------------------------------------------------------
+# UNCERTAINTY
+# -----------------------------------------------------------------------------
+uncertainty:
+  low:
+    dev: 0
+    qa: 0
+    pm: 0
+    description: "Clear and validated specifications"
+    when: "Detailed specs, no ambiguity"
+
+  medium:
+    dev: 0.10
+    qa: 0.10
+    pm: 0.10
+    description: "Some unclear areas"
+    when: "Specs incomplete on certain points"
+
+  high:
+    dev: 0.20
+    qa: 0.20
+    pm: 0.20
+    description: "Incomplete specifications"
+    when: "Many open questions"
+
+  very_high:
+    dev: 0.35
+    qa: 0.30
+    pm: 0.25
+    description: "Very unclear specs / exploratory"
+    when: "Prototyping phase, R&D"
+
+# -----------------------------------------------------------------------------
+# PERFORMANCE
+# -----------------------------------------------------------------------------
+performance:
+  standard:
+    dev: 0
+    qa: 0
+    pm: 0
+    description: "Standard performance"
+    when: "No particular constraint"
+
+  critical:
+    dev: 0.30
+    qa: 0.20
+    pm: 0
+    description: "Critical performance"
+    when: "Strict SLA, high volumes"
+
+  optimization:
+    dev: 0.40
+    qa: 0.25
+    pm: 0
+    description: "Optimization required"
+    when: "Large volumes, real-time"
+
+# -----------------------------------------------------------------------------
+# COMPLIANCE & REGULATION
+# -----------------------------------------------------------------------------
+compliance:
+  standard:
+    dev: 0
+    qa: 0
+    pm: 0
+    description: "No particular requirement"
+
+  regulatory:
+    dev: 0.20
+    qa: 0.30
+    pm: 0.30
+    description: "Regulatory requirements"
+    when: "GDPR, audits, legal traceability"
+
+  certification:
+    dev: 0.25
+    qa: 0.40
+    pm: 0.35
+    description: "Certification required"
+    when: "ISO, SOC2, industry standards"
+
+# -----------------------------------------------------------------------------
+# COORDINATION
+# -----------------------------------------------------------------------------
+coordination:
+  single_team:
+    dev: 0
+    qa: 0
+    pm: 0
+    description: "Single team"
+
+  multi_team:
+    dev: 0.10
+    qa: 0.10
+    pm: 0.25
+    description: "Multiple teams"
+    when: "Cross-team coordination"
+
+  external_vendor:
+    dev: 0.15
+    qa: 0.15
+    pm: 0.35
+    description: "External vendor"
+    when: "Coordination with third-party vendor"
+
+# -----------------------------------------------------------------------------
+# ENVIRONMENT
+# -----------------------------------------------------------------------------
+environment:
+  standard:
+    dev: 0
+    qa: 0
+    pm: 0
+    description: "Standard environment"
+
+  multi_env:
+    dev: 0.10
+    qa: 0.20
+    pm: 0.10
+    description: "Multi-environments"
+    when: "Complex Dev/Staging/Preprod/Prod"
+
+  production_constraints:
+    dev: 0.15
+    qa: 0.25
+    pm: 0.15
+    description: "Production constraints"
+    when: "Zero-downtime deployment, rollback"

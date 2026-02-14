@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Master-Detail Relationship
+  Source: axelor-sale/src/main/resources/domains/SaleOrder.xml + SaleOrderLine.xml (AOS 7.4)
+  Complexity: ⭐⭐ Intermediate
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - One-to-many relationship with orderBy
+  - Many-to-one back-reference (bidirectional)
+  - Sequence field for line ordering
+  - Cascading and orphan removal
+  - Decimal fields with precision patterns
+  - Computed fullName using CDATA
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="sale" package="com.axelor.apps.sale.db"/>
+
+  <!-- MASTER ENTITY -->
+  <entity name="SaleOrder">
+
+    <!-- Identifier -->
+    <string name="saleOrderSeq" title="Internal Number" readonly="true"/>
+
+    <!-- Business fields -->
+    <many-to-one name="company" ref="com.axelor.apps.base.db.Company"
+      required="true" title="Company"/>
+    <many-to-one name="clientPartner" ref="com.axelor.apps.base.db.Partner"
+      title="Customer"/>
+
+    <date name="orderDate" title="Order Date"/>
+    <date name="creationDate" title="Creation date" required="true"
+      readonly="true"/>
+
+    <!-- Status with selection -->
+    <integer name="statusSelect" title="Status"
+      selection="sale.order.status.select" readonly="true"/>
+
+    <!--
+      ONE-TO-MANY: Collection of lines
+      - mappedBy: field name in SaleOrderLine that references this entity
+      - orderBy: sort lines by sequence
+      - cascade, orphanRemoval: composition pattern (lines belong to order)
+    -->
+    <one-to-many name="saleOrderLineList"
+      ref="com.axelor.apps.sale.db.SaleOrderLine"
+      mappedBy="saleOrder"
+      title="Sale order lines"
+      orderBy="sequence"/>
+
+    <!-- Totals with display precision (20,3) -->
+    <decimal name="exTaxTotal" title="Total W.T."
+      scale="3" precision="20" readonly="true"/>
+    <decimal name="taxTotal" title="Total tax"
+      scale="3" precision="20" readonly="true"/>
+    <decimal name="inTaxTotal" title="Total A.T.I."
+      scale="3" precision="20" readonly="true"/>
+
+    <!-- Description fields -->
+    <string name="description" title="Comment to display" large="true"/>
+    <string name="internalNote" title="Internal note" large="true"/>
+
+  </entity>
+
+  <!-- DETAIL ENTITY (LINE) -->
+  <entity name="SaleOrderLine">
+
+    <!--
+      Computed fullName: concatenates order number + product name
+      namecolumn="true": this field is used as display name
+    -->
+    <string name="fullName" namecolumn="true">
+      <![CDATA[
+        String fullName = "";
+        if(saleOrder != null && saleOrder.getSaleOrderSeq() != null){
+          fullName += saleOrder.getSaleOrderSeq();
+        }
+        if(productName != null)  {
+          fullName += "-";
+          if(productName.length() > 100)  {
+            fullName += productName.substring(1, 100);
+          }
+          else  {  fullName += productName;  }
+        }
+        return fullName;
+      ]]>
+    </string>
+
+    <!--
+      MANY-TO-ONE: Back-reference to master
+      Field name MUST match mappedBy in SaleOrder.saleOrderLineList
+    -->
+    <many-to-one name="saleOrder"
+      ref="com.axelor.apps.sale.db.SaleOrder"
+      title="Sale order"/>
+
+    <!--
+      SEQUENCE: Critical for line ordering
+      Always include on line entities
+    -->
+    <integer name="sequence" title="Seq."/>
+
+    <!-- Product reference -->
+    <many-to-one name="product"
+      ref="com.axelor.apps.base.db.Product"
+      title="Product"/>
+    <string name="productName" title="Displayed Product name"
+      required="true"/>
+
+    <!--
+      QUANTITIES: High precision (20,10) for calculations
+    -->
+    <decimal name="qty" title="Qty" default="1"
+      precision="20" scale="10"/>
+
+    <!--
+      PRICES: Very high precision (30,20) for intermediate calculations
+    -->
+    <decimal name="price" title="Unit price W.T."
+      precision="20" scale="10"/>
+    <decimal name="priceDiscounted" title="Unit price discounted"
+      precision="30" scale="20"/>
+
+    <!--
+      TOTALS: Display precision (20,3)
+    -->
+    <decimal name="exTaxTotal" title="Total W.T."
+      precision="20" scale="3" readonly="true"/>
+    <decimal name="inTaxTotal" title="Total A.T.I."
+      precision="20" scale="3" readonly="true"/>
+
+    <!-- Line description -->
+    <string name="description" title="Description" large="true"/>
+
+    <!-- Discount -->
+    <integer name="discountTypeSelect" title="Discount type"
+      selection="base.price.list.line.amount.type.select" default="0"/>
+    <decimal name="discountAmount" title="Discount amount"
+      precision="30" scale="20"/>
+
+    <!-- Dates -->
+    <date name="estimatedShippingDate" title="Estimated shipping date"/>
+    <date name="desiredDeliveryDate" title="Desired delivery date"/>
+
+    <!-- Type selector for special lines (title, subtotal, etc.) -->
+    <integer name="typeSelect" title="Type"
+      selection="line.type.select"/>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  Key Takeaways:
+
+  1. Master-Detail Pattern:
+     Master:
+       <one-to-many name="lines" ref="OrderLine"
+         mappedBy="order" orderBy="sequence"/>
+
+     Detail:
+       <many-to-one name="order" ref="Order"/>
+       <integer name="sequence"/>
+
+  2. Field Name Consistency:
+     - mappedBy value MUST match field name in target entity
+     - Example: mappedBy="saleOrder" → <many-to-one name="saleOrder"
+
+  3. Sequence Field:
+     - Always add integer sequence on line entities
+     - Used for ordering in UI and reports
+     - Referenced in orderBy attribute
+
+  4. Decimal Precision Patterns:
+     - Calculations: precision="30" scale="20"
+     - Prices: precision="20" scale="10"
+     - Totals (display): precision="20" scale="3"
+     - Quantities: precision="20" scale="10"
+
+  5. Computed Fields with CDATA:
+     - Use <![CDATA[...]]> for Java code
+     - Access related entities: saleOrder.getSaleOrderSeq()
+     - Check for null before accessing
+     - Return a value at the end
+
+  6. namecolumn="true":
+     - Marks this field as display name for the entity
+     - Used in many-to-one selectors and grids
+-->

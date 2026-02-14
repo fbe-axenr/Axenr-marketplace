@@ -1,0 +1,210 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Complex Workflow Form with NavSelect, Conditional Panels, and Viewer/Editor
+SOURCE: axelor-open-suite/axelor-crm/views/Lead.xml:92-277
+BEST PRACTICE: Advanced form organization with nested panels, conditional visibility, and rich UI widgets
+CONTEXT: CRM entities with status workflow, contact management, and activity tracking
+KEY PATTERNS:
+- NavSelect widget for status workflow
+- Nested panels (3+ levels deep)
+- Viewer with CDATA for custom JSX rendering
+- Editor with inline field composition
+- Panel-tabs for organizing sections
+- Panel-dashlet for embedded dashlets
+- Sidebar panels for actions
+- x- attributes (x-show-titles, x-placeholder-number-type, x-bind)
+- Complex conditional logic (showIf, hideIf with multiple conditions)
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <form name="lead-form" title="Lead" model="com.axelor.apps.crm.db.Lead"
+    onLoad="action-group-crm-lead-onload" onNew="action-group-crm-lead-onnew"
+    onSave="action-crm-lead-method-check-name">
+
+    <!-- PATTERN: Nested Panel Structure (3 levels) -->
+    <panel name="mainPanel">
+      <!-- Level 2: Status Panel with NavSelect Widget -->
+      <panel name="statusPanel" colSpan="12">
+        <field name="$isLost" type="boolean" hidden="true"/>
+
+        <!-- PATTERN: NavSelect widget for status workflow -->
+        <field name="leadStatus" showTitle="false" colSpan="12" widget="NavSelect"
+          x-order="sequence" onChange="action-lead-group-lead-status-onchange"
+          readonlyIf="!id || isConverted || $isLost"/>
+
+        <!-- Level 3: Viewer Panel with CDATA for custom rendering -->
+        <panel name="viewerDetailsPanel" colSpan="12" showIf="$readonly()">
+          <!-- PATTERN: Viewer with CDATA for JSX rendering -->
+          <field name="$viewerTagsLeft" showTitle="false">
+            <viewer depends="industrySector">
+              <![CDATA[<>{industrySector && <Badge bg="primary">{industrySector.name}</Badge>}</>]]>
+            </viewer>
+          </field>
+        </panel>
+      </panel>
+
+      <!-- PATTERN: Image Panel with Social Network Links -->
+      <panel name="imagePanel" colSpan="3">
+        <field name="picture" showTitle="false" widget="Image" colSpan="12"/>
+        <panel name="socialNetworkPanel" colSpan="12" showIf="fullName != null">
+          <label name="googleLabel"
+            title="&lt;a class='fa fa-google' href='http://www.google.com' target='_blank' /&gt;"
+            colSpan="2"/>
+          <label name="linkedinLabel"
+            title="&lt;a class='fa fa-linkedin' href='http://www.linkedin.com' target='_blank' /&gt;"
+            colSpan="2"/>
+        </panel>
+      </panel>
+
+      <!-- PATTERN: General Info Panel with Viewer/Editor Duality -->
+      <panel colSpan="9" name="generalInfoPanel">
+        <!-- PATTERN: Field with viewer (read mode) and editor (edit mode) -->
+        <field name="$firstNameAndName" showTitle="false" colSpan="12"
+          css="label-bold bold large">
+          <!-- Viewer: Custom display with CDATA -->
+          <viewer depends="firstName,name">
+            <![CDATA[<>{firstName} {name}</>]]>
+          </viewer>
+          <!-- Editor: Inline composition of multiple fields -->
+          <editor x-show-titles="false">
+            <field name="titleSelect" showTitle="false" placeholder="Civility" colSpan="2"/>
+            <field name="firstName" showTitle="false" css="highlight" placeholder="First name"
+              colSpan="5"
+              onChange="action-crm-lead-method-check-name,action-lead-method-set-social-network-url"/>
+            <field name="name" showTitle="false" css="highlight" placeholder="Name"
+              colSpan="5"
+              onChange="action-crm-lead-method-check-name,action-lead-method-set-social-network-url"/>
+          </editor>
+        </field>
+
+        <!-- PATTERN: Nested Contact Detail Panel -->
+        <panel name="contactDetailPanel" title="Contact details" colSpan="12">
+          <!-- PATTERN: Phone widget with x-placeholder attribute -->
+          <field name="fixedPhone" widget="phone" colSpan="4"
+            x-placeholder-number-type="FIXED_LINE"/>
+          <field name="mobilePhone" widget="phone" colSpan="4"/>
+
+          <!-- PATTERN: Email field with inline editor -->
+          <field name="emailAddress" colSpan="4" canSelect="false"
+            form-view="email-address-simple-form" x-show-icons="false">
+            <editor x-show-titles="false" x-viewer="true">
+              <field name="address" colSpan="12" placeholder="whatever@example.com"
+                widget="email"/>
+            </editor>
+          </field>
+        </panel>
+      </panel>
+    </panel>
+
+    <!-- PATTERN: Panel-Tabs for organizing related sections -->
+    <panel-tabs name="mainPanelTab">
+      <!-- Tab 1: Contact Information -->
+      <panel name="contactPanel" title="Contact" colSpan="12">
+        <field name="jobTitleFunction" colSpan="6" placeholder="Function" canNew="true"/>
+
+        <panel name="contactDetailPanel" title="Contact details" colSpan="12">
+          <field name="fixedPhone" widget="phone" colSpan="4"
+            x-placeholder-number-type="FIXED_LINE"/>
+          <field name="webSite" colSpan="6" placeholder="http://www.url.com"
+            widget="url" pattern="^(?:http(?:s)?://)?\S+(?:\.\S+)+$"/>
+          <field name="isDoNotCall" colSpan="3" hideIf="$readonly()"/>
+          <field name="isDoNotSendEmail" colSpan="3" hideIf="$readonly()"/>
+        </panel>
+
+        <!-- PATTERN: Address Panel with Editor and x-bind -->
+        <panel name="addressPanel" title="Primary address" colSpan="12">
+          <field name="address" canNew="true" canEdit="true" colSpan="12"
+            form-view="incl-address-main-panel-form" grid-view="address-grid" showTitle="false"
+            onChange="action-lead-address-get-address-fields">
+            <editor>
+              <panel name="mainPanel" colSpan="12">
+                <field name="country" colSpan="12" canEdit="false"
+                  onChange="action-group-base-address-country-change" required="true"
+                  form-view="country-form" grid-view="country-grid"/>
+                <panel name="countryHiddenPanel" hideIf="country == null" colSpan="12">
+                  <!-- PATTERN: x-bind attribute for uppercase transformation -->
+                  <field name="department" x-bind="{{department|uppercase}}" colSpan="12"/>
+                  <field name="subDepartment" colSpan="12"
+                    x-bind="{{subDepartment|uppercase}}"/>
+                  <field name="city" colSpan="12" canNew="true" canEdit="false"
+                    onChange="action-address-change-city, action-address-validate-change-city"
+                    onSelect="action-address-attrs-update-domain-city" form-view="city-form"
+                    grid-view="city-grid"/>
+                </panel>
+              </panel>
+            </editor>
+          </field>
+        </panel>
+      </panel>
+
+      <!-- Tab 2: Events with Panel-Dashlet -->
+      <panel name="eventPanel" title="Events">
+        <button name="meetingBtn" title="Create a meeting" link="" icon="fa-pencil-square-o"
+          onClick="save,action-lead-view-meeting-event" colSpan="3"/>
+        <button name="callBtn" title="Create a call" link="" icon="fa-phone"
+          onClick="save,action-lead-view-call-event" colSpan="3"/>
+
+        <!-- PATTERN: Panel-Dashlet for embedding dashboard content in form -->
+        <panel-dashlet name="eventPanelDashlet" action="action-lead-view-events"
+          title="Events" height="550" colSpan="12"/>
+      </panel>
+
+      <!-- Tab 3: Emails with Multiple Panel-Dashlets -->
+      <panel name="emailPanel" title="Emails">
+        <button name="emailBtn" title="Create an email" link="" icon="fa-envelope-o"
+          onClick="save,action-send-by-email-with-template" colSpan="3"/>
+        <panel-dashlet name="leadSentEmailsPanel" title="Sent emails"
+          action="action-lead-view-sent-emails" colSpan="12" height="550"/>
+        <panel-dashlet name="leadReceivedEmailsPanel" title="Received emails"
+          action="action-lead-view-received-emails" colSpan="12" height="550"/>
+      </panel>
+    </panel-tabs>
+
+    <!-- PATTERN: Sidebar Panel for Actions -->
+    <panel name="actionsPanel" sidebar="true"
+      hideIf="user.id == _internalUserId &amp;&amp; (!id || isConverted) &amp;&amp; !partner">
+      <button name="grabLeadBtn" title="Take in charge" hideIf="user.id == _internalUserId"
+        icon="fa-suitcase" onClick="save,action-lead-method-assign-to-me"/>
+      <button name="convertBtn" title="Convert" hideIf="!id || isConverted || $isLost"
+        icon="fa-exchange" onClick="action-lead-group-lead-convert"/>
+    </panel>
+
+    <!-- PATTERN: Activity Sidebar Panel with Dashlet -->
+    <panel sidebar="true" name="activityPanel" title="Activity" colSpan="12" showIf="id">
+      <panel-dashlet action="action-lead-view-lead-activity-custom" height="550"/>
+    </panel>
+
+    <!-- PATTERN: Panel-Mail for messaging integration -->
+    <panel-mail name="mailPanel">
+      <mail-messages limit="4"/>
+      <mail-followers/>
+    </panel-mail>
+
+  </form>
+
+  <!--
+  KEY TAKEAWAYS:
+
+  1. **Panel Nesting**: Up to 3-4 levels (mainPanel > statusPanel > viewerDetailsPanel)
+  2. **12-Column Grid**: Use colSpan for responsive layout (colSpan="3", "4", "6", "9", "12")
+  3. **Conditional Visibility**: showIf, hideIf with complex expressions (&&, ||, ==, !=, !)
+  4. **Viewer/Editor**: Different rendering for read vs edit mode
+  5. **CDATA Sections**: Embed JSX for custom rendering with React components
+  6. **x- Attributes**: Framework extensions (x-show-titles, x-bind, x-placeholder-number-type)
+  7. **Widgets**: NavSelect, Image, phone, email, url for specialized input
+  8. **Panel-Tabs**: Organize related sections in tabs
+  9. **Panel-Dashlet**: Embed dashboard content within forms
+  10. **Sidebar Panels**: sidebar="true" for action panels on the right
+  11. **Panel-Mail**: Specialized panel for mail messages and followers
+  12. **Action Chains**: Multiple actions separated by commas (save,action-name)
+  13. **Placeholders**: User-friendly hints for input fields
+  14. **CSS Classes**: Custom styling with css attribute
+  15. **Icons**: Font Awesome icons in buttons and labels
+  -->
+
+</object-views>

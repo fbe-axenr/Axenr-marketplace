@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Basic Entity with Simple Fields
+  Source: axelor-crm/src/main/resources/domains/Lead.xml (AOS 7.4)
+  Complexity: ⭐ Basic
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - Simple field types (string, boolean, date)
+  - Selection field (enum)
+  - Many-to-one relationships
+  - Binary field (file upload)
+  - String with large="true" for long text
+  - One-to-one relationship with unique constraint
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="crm" package="com.axelor.apps.crm.db"/>
+
+  <entity name="Lead">
+
+    <!-- Simple string fields -->
+    <string name="titleSelect" title="Gender" selection="partner.title.type.select"/>
+    <string name="name" required="true" title="Last name"/>
+    <string name="firstName" title="First name"/>
+    <string name="enterpriseName" title="Enterprise"/>
+
+    <!-- Contact information -->
+    <string name="mobilePhone" title="Mobile number"/>
+    <string name="fixedPhone" title="Phone number"/>
+    <string name="webSite" title="Website"/>
+
+    <!-- Long text field: Use large="true" NOT <text/> -->
+    <string name="description" title="Description" large="true"/>
+
+    <!-- Many-to-one relationships -->
+    <many-to-one name="jobTitleFunction" title="Job Title"
+      ref="com.axelor.apps.base.db.Function"/>
+    <many-to-one name="address" ref="com.axelor.apps.base.db.Address"
+      title="Address"/>
+    <many-to-one name="source" ref="com.axelor.apps.base.db.Source"
+      title="Source"/>
+
+    <!-- One-to-one relationship with unique constraint -->
+    <one-to-one name="emailAddress" ref="com.axelor.message.db.EmailAddress"
+      title="Email" unique="true"/>
+
+    <!-- Binary field for file upload -->
+    <binary name="picture" title="Picture"/>
+
+    <!-- Date field -->
+    <date name="contactDate" title="Creation date"/>
+
+    <!-- Boolean fields -->
+    <boolean name="isDoNotCall" title="Do not call"/>
+    <boolean name="isDoNotSendEmail" title="Do not email"/>
+
+    <!-- Status with selection reference -->
+    <many-to-one ref="com.axelor.apps.crm.db.LeadStatus"
+      name="leadStatus" title="Lead status"/>
+
+    <!-- Assignment fields (common pattern) -->
+    <many-to-one name="user" column="user_id"
+      ref="com.axelor.auth.db.User"
+      title="Assigned to" massUpdate="true"/>
+    <many-to-one name="team" ref="com.axelor.team.db.Team"
+      title="Team" massUpdate="true"/>
+
+    <!-- Multi-company support -->
+    <many-to-one name="company" ref="com.axelor.apps.base.db.Company"
+      title="Company"/>
+
+    <!-- Integer fields -->
+    <integer name="numberOfEmployees" title="Number of employees"/>
+    <integer name="sizeSelect" title="Size"
+      selection="crm.lead.size.select"/>
+
+    <!-- Converted flag -->
+    <boolean name="isConverted" title="Converted"/>
+    <many-to-one name="partner" ref="com.axelor.apps.base.db.Partner"
+      title="Contact" readonly="true"/>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  Key Takeaways:
+
+  1. String Fields:
+     - Use large="true" for long text (TEXT column type)
+     - NEVER use <text/> tag (doesn't exist in Axelor)
+     - IN case of a custom field need, add json="true" in a string field ONLY
+
+  2. Relationships:
+     - Many-to-one: ref points to fully qualified class
+     - One-to-one: add unique="true" for uniqueness
+     - Use title attribute for better UI labels
+
+  3. Enumerations:
+     - Use selection="reference.name" for dropdowns
+     - Can be on string or integer fields
+
+  4. Common Patterns:
+     - massUpdate="true": allows bulk updates in UI
+     - readonly="true": displayed but not editable
+     - required="true": mandatory field
+
+-->

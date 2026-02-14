@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Status Workflow with Tracking
+  Source: axelor-sale/src/main/resources/domains/SaleOrder.xml (AOS 7.4)
+  Complexity: ⭐⭐⭐ Advanced
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - Status workflow with integer selection
+  - Field tracking (audit trail)
+  - Workflow dates and users
+  - Track messages with tags
+  - Readonly status field
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="sale" package="com.axelor.apps.sale.db"/>
+
+  <entity name="SaleOrder">
+
+    <!-- Identifier -->
+    <string name="saleOrderSeq" title="Internal Number" readonly="true"/>
+
+    <!-- Customer -->
+    <many-to-one name="clientPartner"
+      ref="com.axelor.apps.base.db.Partner"
+      title="Customer"/>
+
+    <!--
+      STATUS WORKFLOW:
+      - Integer with selection (NOT string)
+      - Readonly in UI (modified by services only)
+      - Default to initial status (1 = Draft)
+    -->
+    <integer name="statusSelect"
+      title="Status"
+      selection="sale.order.status.select"
+      readonly="true"
+      default="1"/>
+
+    <!--
+      WORKFLOW DATES:
+      Track when status changes occurred
+    -->
+    <date name="creationDate"
+      title="Creation date"
+      required="true"
+      readonly="true"/>
+
+    <datetime name="confirmationDateTime"
+      title="Confirmation date"
+      readonly="true"/>
+
+    <!--
+      WORKFLOW USERS:
+      Track who performed status changes
+    -->
+    <many-to-one name="confirmedByUser"
+      ref="com.axelor.auth.db.User"
+      readonly="true"
+      title="Confirmed by"/>
+
+    <!-- Business amount -->
+    <decimal name="inTaxTotal"
+      title="Total A.T.I."
+      scale="3" precision="20"
+      readonly="true"/>
+
+    <!--
+      TRACKING CONFIGURATION:
+      Generates audit trail entries in database
+    -->
+    <track>
+      <!-- Track specific field changes -->
+      <field name="saleOrderSeq"/>
+      <field name="clientPartner"/>
+      <field name="statusSelect"/>
+
+      <!-- Track only on CREATE -->
+      <field name="creationDate" on="CREATE"/>
+
+      <!-- Track only on UPDATE -->
+      <field name="confirmationDateTime" on="UPDATE"/>
+
+      <!-- Track amount changes -->
+      <field name="inTaxTotal"/>
+
+      <!-- Conditional messages based on status -->
+      <message if="true" on="CREATE">Quotation/sale order created</message>
+      <message if="statusSelect == 1" tag="important">Draft quotation</message>
+      <message if="statusSelect == 2" tag="info">Finalized quotation</message>
+      <message if="statusSelect == 3" tag="success">Order confirmed</message>
+      <message if="statusSelect == 4" tag="success">Order completed</message>
+      <message if="statusSelect == 5" tag="warning">Canceled</message>
+    </track>
+
+    <!--
+      EXTRA CODE: Status constants
+      Used in services for status transitions
+    -->
+    <extra-code>
+      <![CDATA[
+        // Status select values
+        public static final int STATUS_DRAFT_QUOTATION = 1;
+        public static final int STATUS_FINALIZED_QUOTATION = 2;
+        public static final int STATUS_ORDER_CONFIRMED = 3;
+        public static final int STATUS_ORDER_COMPLETED = 4;
+        public static final int STATUS_CANCELED = 5;
+      ]]>
+    </extra-code>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  Selection definition (typically in separate Selections.xml in "view" folder, this is not a Domain file):
+
+  <selection name="sale.order.status.select">
+    <option value="1">Draft quotation</option>
+    <option value="2">Finalized quotation</option>
+    <option value="3">Order confirmed</option>
+    <option value="4">Order completed</option>
+    <option value="5">Canceled</option>
+  </selection>
+-->
+
+<!--
+  Key Takeaways:
+
+  1. Status Field Pattern:
+     - Prefer integer (not string) for performance
+     - Add selection reference for display
+     - Make readonly="true" (services change it)
+     - Set default to initial status
+
+  2. Tracking Configuration:
+     <track>
+       <field name="fieldName" on="CREATE|UPDATE"/>
+       <message if="condition" tag="tag">Message</message>
+     </track>
+
+  3. Track Field Events:
+     - on="CREATE": only track when record created
+     - on="UPDATE": only track when record updated
+     - on="ALWAYS": everytime a modification is done
+     - no on attribute: track on both CREATE and UPDATE
+
+  4. Track Message Tags:
+     - tag="important": red/high priority
+     - tag="success": green/positive
+     - tag="warning": yellow/attention
+     - tag="info": blue/informational
+
+  5. Status Constants in Extra Code:
+     - Define public static final int for each status
+     - Name pattern: STATUS_UPPERCASE_WITH_UNDERSCORES
+     - Add helper methods for status checks
+     - Used in services: if(order.getStatusSelect() == STATUS_DRAFT)
+
+  6. Workflow Fields Pattern:
+     - {action}Date: date/datetime when status changed
+     - {action}By: user who performed action
+     - All readonly (set by services)
+     - Examples: confirmedDate, confirmedBy, validatedDate, validatedBy
+
+  7. Track Message Conditions:
+     - if="true": always show
+     - if="statusSelect == N": show when status is N
+     - Can use complex expressions
+     - Evaluated when displaying audit trail
+-->

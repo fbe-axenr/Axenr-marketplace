@@ -1,0 +1,362 @@
+# Stage Templates for GitLab CI Generator
+# These templates can be combined to create complete .gitlab-ci.yml configurations
+
+# ============================================================================
+# INIT STAGE - Validation (BLOCKING)
+# ============================================================================
+
+init_stage_commitlint:
+  stage: init
+  image: node:20-alpine
+  before_script:
+    - npm install --save-dev @commitlint/cli @commitlint/config-conventional
+  script:
+    - |
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        echo "Validating commits from $CI_MERGE_REQUEST_DIFF_BASE_SHA to $CI_COMMIT_SHA"
+        npx commitlint --from ${CI_MERGE_REQUEST_DIFF_BASE_SHA} --to ${CI_COMMIT_SHA} --verbose
+      else
+        echo "Validating last commit"
+        npx commitlint --from HEAD~1 --to HEAD --verbose
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_REF_PROTECTED == "true"
+  allow_failure: false  # BLOCKING
+
+init_stage_validate_mr_title:
+  stage: init
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache bash grep
+  script:
+    - bash ci/scripts/validate-mr-title.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  allow_failure: false  # BLOCKING
+
+init_stage_squash_check:
+  stage: init
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache bash git
+  script:
+    - |
+      COMMITS_COUNT=$(git rev-list --count ${CI_MERGE_REQUEST_DIFF_BASE_SHA}..${CI_COMMIT_SHA})
+      if [ "$COMMITS_COUNT" -gt 1 ]; then
+        echo "ERROR: MR has $COMMITS_COUNT commits. Squash to 1 commit before merging."
+        exit 1
+      fi
+      echo "OK: Single commit in MR"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  allow_failure: false  # BLOCKING
+
+# ============================================================================
+# BUILD STAGE - Gradle
+# ============================================================================
+
+build_stage_gradle:
+  stage: build
+  image: gradle:8.5-jdk17-alpine
+  cache:
+    key:
+      files:
+        - gradle.lockfile
+        - build.gradle
+    paths:
+      - .gradle/wrapper
+      - .gradle/caches
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+  script:
+    - ./gradlew clean build -x test --info
+  artifacts:
+    paths:
+      - build/libs/*.jar
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# BUILD STAGE - Maven
+# ============================================================================
+
+build_stage_maven:
+  stage: build
+  image: maven:3.9-eclipse-temurin-17-alpine
+  cache:
+    key:
+      files:
+        - pom.xml
+    paths:
+      - .m2/repository
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  script:
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# BUILD STAGE - Node.js
+# ============================================================================
+
+build_stage_node:
+  stage: build
+  image: node:20-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+      - build/
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# TEST STAGE - Gradle with JaCoCo Coverage
+# ============================================================================
+
+test_stage_gradle:
+  stage: test
+  image: gradle:8.5-jdk17-alpine
+  cache:
+    key:
+      files:
+        - gradle.lockfile
+        - build.gradle
+    paths:
+      - .gradle/wrapper
+      - .gradle/caches
+    policy: pull  # Only pull cache, don't push
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+  script:
+    - ./gradlew test jacocoTestReport
+  coverage: '/Total.*?([0-9]{1,3})%/'
+  artifacts:
+    when: always
+    paths:
+      - build/reports/tests/
+      - build/reports/jacoco/
+    reports:
+      junit: build/test-results/test/TEST-*.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: build/reports/jacoco/test/jacocoTestReport.xml
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# TEST STAGE - Maven with JaCoCo Coverage
+# ============================================================================
+
+test_stage_maven:
+  stage: test
+  image: maven:3.9-eclipse-temurin-17-alpine
+  cache:
+    key:
+      files:
+        - pom.xml
+    paths:
+      - .m2/repository
+    policy: pull
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  script:
+    - mvn test jacoco:report
+  coverage: '/Total.*?([0-9]{1,3})%/'
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports/
+      - target/site/jacoco/
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# TEST STAGE - Node.js with Coverage
+# ============================================================================
+
+test_stage_node:
+  stage: test
+  image: node:20-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull
+  script:
+    - npm run test:coverage
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 1 week
+  only:
+    - branches
+    - tags
+
+# ============================================================================
+# QUALITY STAGE - Spotless (Java Formatting)
+# ============================================================================
+
+quality_stage_spotless_gradle:
+  stage: quality
+  image: gradle:8.5-jdk17-alpine
+  cache:
+    key:
+      files:
+        - gradle.lockfile
+        - build.gradle
+    paths:
+      - .gradle/wrapper
+      - .gradle/caches
+    policy: pull
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+  script:
+    - ./gradlew spotlessCheck
+  allow_failure: false  # BLOCKING
+  only:
+    - branches
+    - merge_requests
+
+quality_stage_spotless_maven:
+  stage: quality
+  image: maven:3.9-eclipse-temurin-17-alpine
+  cache:
+    key:
+      files:
+        - pom.xml
+    paths:
+      - .m2/repository
+    policy: pull
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  script:
+    - mvn spotless:check
+  allow_failure: false  # BLOCKING
+  only:
+    - branches
+    - merge_requests
+
+# ============================================================================
+# QUALITY STAGE - SonarQube Analysis
+# ============================================================================
+
+quality_stage_sonarqube_gradle:
+  stage: quality
+  image: gradle:8.5-jdk17-alpine
+  cache:
+    key:
+      files:
+        - gradle.lockfile
+        - build.gradle
+    paths:
+      - .gradle/wrapper
+      - .gradle/caches
+    policy: pull
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+  script:
+    - ./gradlew sonarqube -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+  allow_failure: true  # NON-BLOCKING (optional quality gate)
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================================================
+# PLAN STAGE - Changelog Generation with Git-Cliff
+# ============================================================================
+
+plan_stage_changelog:
+  stage: plan
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git curl tar
+    - curl -L https://github.com/orhun/git-cliff/releases/latest/download/git-cliff-$(uname -m)-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin
+  script:
+    - git-cliff --output CHANGELOG.md
+    - cat CHANGELOG.md
+  artifacts:
+    paths:
+      - CHANGELOG.md
+    expire_in: never
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# DEPLOY STAGE - Example Deployment
+# ============================================================================
+
+deploy_stage_staging:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Deploying to staging environment..."
+    - echo "Artifact: build/libs/*.jar"
+  environment:
+    name: staging
+    url: https://staging.example.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+deploy_stage_production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Deploying to production environment..."
+    - echo "Artifact: build/libs/*.jar"
+  environment:
+    name: production
+    url: https://production.example.com
+  rules:
+    - if: $CI_COMMIT_TAG
+  when: manual  # Require manual approval
+
+# ============================================================================
+# CLEANUP STAGE - Resource Cleanup
+# ============================================================================
+
+cleanup_stage_docker:
+  stage: cleanup
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker system prune -af --volumes
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  when: always

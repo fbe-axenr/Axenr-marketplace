@@ -1,0 +1,483 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Comprehensive Grid View Patterns - Standalone and Embedded
+SOURCE: axelor-open-suite/axelor-production/ManufOrder.xml + OperationOrder.xml + axelor-account/Invoice.xml
+BEST PRACTICE: Understanding different grid contexts and advanced features
+CONTEXT: Grid views used standalone (from menu) vs embedded (in forms via panel-related)
+KEY PATTERNS:
+- Standalone grid with toolbar and action buttons
+- Embedded grid in forms (panel-related reference)
+- Grid with toolbar AND menubar combined
+- Hilite rules for row coloring
+- Column widgets (single-select, Progress, phone, email)
+- Field attributes (x-scale, x-image-field, aggregate, width, hidden)
+- Conditional buttons (hideIf, showIf, readonlyIf)
+- Action chaining in buttons
+- Hidden fields for conditional logic
+- Aggregations (sum, avg)
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Standalone Grid from Menu with Toolbar -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="manuf-order-grid" title="Manufacturing orders"
+        model="com.axelor.apps.production.db.ManufOrder" orderBy="-manufOrderSeq">
+
+    <!-- PATTERN: Toolbar with single action button -->
+    <toolbar>
+      <button name="mergeBtn" title="Merge manufacturing orders" icon="fa-code-fork"
+              onClick="action-manuf-order-group-merge"/>
+    </toolbar>
+
+    <!-- PATTERN: Priority-based hilite with 4 levels -->
+    <hilite color="danger" if="prioritySelect == 4"/>
+    <hilite color="warning" if="prioritySelect == 3"/>
+    <hilite color="primary" if="prioritySelect == 2"/>
+    <hilite color="info" if="prioritySelect == 1"/>
+
+    <!-- PATTERN: Hidden field used in hilite conditions -->
+    <field name="prioritySelect" hidden="true"/>
+
+    <!-- PATTERN: Standard columns with width control -->
+    <field name="manufOrderSeq" width="120"/>
+    <field name="company" form-view="company-form" grid-view="company-grid"
+           if="__config__.app.getApp('base')?.getEnableMultiCompany()"/>
+    <field name="product" form-view="product-form" grid-view="product-grid"/>
+
+    <!-- PATTERN: Numeric field with precision control -->
+    <field name="qty" x-scale="2"/>
+
+    <!-- PATTERN: Selection field as single-select widget -->
+    <field name="statusSelect" widget="single-select"/>
+
+    <!-- PATTERN: Action button with icon and readonly condition -->
+    <button name="planBtn" icon="fa-calendar" title="Plan"
+            onClick="action-manuf-order-method-plan"
+            readonlyIf="statusSelect >= 3"/>
+
+    <!-- PATTERN: Conditional button visibility based on status -->
+    <button name="startBtn" icon="fa-play" title="Start"
+            onClick="action-manuf-order-method-start-or-resume"
+            readonlyIf="statusSelect != 3 &amp;&amp; statusSelect != 5"/>
+
+    <button name="pauseBtn" icon="fa-pause" title="Pause"
+            onClick="action-manuf-order-method-pause"
+            readonlyIf="statusSelect != 4"/>
+
+    <button name="finishBtn" icon="fa-power-off" title="Finish"
+            onClick="action-manuf-order-group-finish"
+            readonlyIf="statusSelect != 4"/>
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Embedded Grid in Form (via panel-related) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!--
+  CONTEXT: This grid is called from ManufOrder form via:
+  <panel-related name="operationOrderListPanel" field="operationOrderList"
+    readonlyIf="statusSelect == 6" colSpan="12" height="15"
+    form-view="operation-order-form" grid-view="operation-order-grid"
+    canNew="false" onChange="action-manuf-order-method-update-lines-outsourced"/>
+  -->
+
+  <grid name="operation-order-grid" title="Operations"
+        model="com.axelor.apps.production.db.OperationOrder"
+        orderBy="priority" canNew="false">
+
+    <!-- PATTERN: Single hilite for specific condition (outsourcing) -->
+    <hilite if="outsourcing" color="orange"/>
+
+    <!-- PATTERN: Narrow field for priority -->
+    <field name="priority" width="80"/>
+
+    <!-- PATTERN: Field with conditional readonly based on status -->
+    <field name="operationName" readonlyIf="statusSelect == 6"/>
+
+    <!-- PATTERN: Related field with custom views -->
+    <field name="machine" grid-view="machine-grid" form-view="machine-form"/>
+
+    <!-- PATTERN: DateTime fields for planning -->
+    <field name="plannedStartDateT"/>
+    <field name="plannedEndDateT"/>
+    <field name="realStartDateT"/>
+    <field name="realEndDateT"/>
+
+    <field name="statusSelect" widget="single-select"/>
+
+    <!-- PATTERN: Hidden fields used in button conditions (dependencies) -->
+    <field name="prodProcessLine.optional" hidden="true"/>
+    <field name="manufOrder.statusSelect" hidden="true"/>
+    <field name="manufOrder.prodProcess" hidden="true"/>
+    <field name="outsourcing" hidden="true"/>
+    <field name="manufOrder.prodProcess.operationContinuity" hidden="true"/>
+    <field name="manufOrder.operationOrderMaxPriority" hidden="true"/>
+
+    <!-- PATTERN: Button with save action chain -->
+    <button name="planBtn" icon="fa-calendar" title="Plan"
+            onClick="save,action-operation-order-method-plan"
+            readonlyIf="statusSelect != 2 || $get('manufOrder.statusSelect') &lt; 3"/>
+
+    <!-- PATTERN: Complex readonlyIf with nested field references and logic -->
+    <button name="startBtn" icon="fa-play" title="Start"
+            onClick="save,action-operation-order-group-start-or-resume"
+            readonlyIf="(statusSelect != 3 &amp;&amp; statusSelect != 5) ||
+                        ($get('manufOrder.prodProcess.operationContinuity') &amp;&amp;
+                         !((!$get('prodProcessLine.optional') &amp;&amp; priority == $get('manufOrder.operationOrderMaxPriority')) ||
+                           ($get('prodProcessLine.optional') &amp;&amp; priority &lt; $get('manufOrder.operationOrderMaxPriority'))))"/>
+
+    <!-- PATTERN: Button with save in action chain (save before AND after) -->
+    <button name="pauseBtn" icon="fa-pause" title="Pause"
+            onClick="save,action-operation-order-group-pause,save"
+            readonlyIf="statusSelect != 4"/>
+
+    <button name="finishBtn" icon="fa-power-off" title="Finish"
+            onClick="action-operation-order-group-finish"
+            readonlyIf="statusSelect != 4"/>
+
+    <button name="cancelBtn" icon="fa-times-circle" title="Cancel"
+            onClick="save,action-operation-order-group-cancel,save"
+            readonlyIf="statusSelect == 2 || statusSelect == 6"/>
+
+    <button name="printBtn" title="Print" icon="fa-print"
+            onClick="save,action-method-print-template"/>
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Grid with Toolbar AND Menubar Combined -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="invoice-grid" title="Invoices"
+        model="com.axelor.apps.account.db.Invoice"
+        orderBy="-invoiceDate">
+
+    <!-- PATTERN: Toolbar for primary action (print) -->
+    <toolbar>
+      <button name="printBtn" title="Print invoices"
+              onClick="action-invoice-method-show-invoice" icon="fa-print"/>
+    </toolbar>
+
+    <!-- PATTERN: Menubar for secondary/batch actions -->
+    <menubar>
+      <menu name="invoiceToolsMenu" title="Tools" icon="fa-wrench" showTitle="true">
+        <!-- PATTERN: Menu item with confirmation prompt -->
+        <item name="validateSelectedInvoicesItem" title="Validate selected invoices"
+              action="action-invoice-method-mass-validation"
+              prompt="Are you sure you want to validate all selected invoices ?"/>
+
+        <!-- PATTERN: Menu item with conditional visibility -->
+        <item name="ventilateSelectedInvoicesItem" title="Ventilate selected invoices"
+              action="action-invoice-method-mass-ventilation"
+              prompt="Are you sure you want to ventilate all selected invoices ?"
+              if="!__config__.app.getApp('invoice')?.isVentilationSkipped"/>
+
+        <item name="mergeCustInvoicesItem" title="Merge Cust. Invoices"
+              action="action-invoice-method-convert-selected-lines-to-merge-lines"/>
+
+        <item name="seeCustInvoicesLinesItem" title="See cust. invoices lines"
+              action="action-customer-invoice-line-menu"/>
+      </menu>
+    </menubar>
+
+    <!-- PATTERN: Multiple hilite rules based on status and conditions -->
+    <hilite color="primary" if="statusSelect == 1"/>
+    <hilite color="danger"
+            if="statusSelect == 3 &amp;&amp; amountRemaining &gt; 0 &amp;&amp;
+                $moment(dueDate).diff(todayDate,'days') &lt; 0"/>
+    <hilite color="warning"
+            if="statusSelect == 3 &amp;&amp; amountRemaining &gt; 0 &amp;&amp;
+                $moment(dueDate).diff(todayDate,'days') &gt;= 0 &amp;&amp;
+                $moment(dueDate).diff(todayDate,'days') &lt;= 5"/>
+    <hilite color="success"
+            if="statusSelect == 3 &amp;&amp; amountRemaining == 0"/>
+
+    <!-- PATTERN: Standard identifier field -->
+    <field name="invoiceId" width="120"/>
+
+    <!-- PATTERN: Company field with multi-company condition -->
+    <field name="company" form-view="company-form" grid-view="company-grid" width="200"
+           if="__config__.app.getApp('base')?.getEnableMultiCompany()"/>
+
+    <!-- PATTERN: Related field with image preview -->
+    <field name="partner" form-view="partner-form" grid-view="partner-grid" width="200"
+           x-image-field="picture"/>
+
+    <field name="invoiceDate" width="120"/>
+    <field name="dueDate" width="120"/>
+
+    <!-- PATTERN: Currency fields with aggregation and dynamic scale -->
+    <field name="exTaxTotal" aggregate="sum" width="120"
+           x-scale="currency.numberOfDecimals"/>
+    <field name="inTaxTotal" aggregate="sum" width="120"
+           x-scale="currency.numberOfDecimals"/>
+    <field name="amountRemaining" aggregate="sum" width="120"
+           x-scale="currency.numberOfDecimals"/>
+
+    <field name="currency" width="60"/>
+
+    <!-- PATTERN: Hidden field for scale reference -->
+    <field name="currency.numberOfDecimals" hidden="true"/>
+
+    <field name="statusSelect" width="100" widget="single-select"/>
+
+    <!-- PATTERN: Progress bar widget for visual indicator -->
+    <field name="paymentProgress" widget="Progress"/>
+
+    <!-- PATTERN: Row-level action buttons -->
+    <button name="printBtn" title="Print" icon="fa-print"
+            onClick="action-invoice-method-show-invoice"/>
+
+    <button name="sendByEmailBtn" title="Send email" icon="fa-envelope"
+            onClick="action-validate-send-email-remove-access-for-client,action-send-by-email-with-template"/>
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Grid with Advanced Column Configuration -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="opportunity-grid" title="Opportunities"
+        model="com.axelor.apps.crm.db.Opportunity"
+        orderBy="opportunityStatus.sequence,expectedCloseDate">
+
+    <!-- PATTERN: Toolbar with controller method call -->
+    <toolbar>
+      <button name="grabOpportunityBtn" icon="fa-suitcase" help="Take charge"
+              onClick="com.axelor.apps.crm.web.OpportunityController:assignToMe"/>
+    </toolbar>
+
+    <!-- PATTERN: Hilite using $get() for nested ID comparison -->
+    <hilite background="success" if="$get('opportunityStatus.id') == $closedWonId"/>
+    <hilite background="danger" if="$get('opportunityStatus.id') == $closedLostId"/>
+
+    <field name="opportunitySeq"/>
+    <field name="name" required="true"/>
+    <field name="partner" form-view="partner-form" grid-view="partner-grid"/>
+    <field name="opportunityStatus"/>
+
+    <!-- PATTERN: Currency field with sum aggregation -->
+    <field name="amount" aggregate="sum"/>
+
+    <!-- PATTERN: Progress widget with average aggregation -->
+    <field name="probability" aggregate="avg" widget="Progress"/>
+
+    <field name="expectedCloseDate"/>
+    <field name="user" form-view="user-form" grid-view="user-grid"/>
+
+    <!-- PATTERN: Hidden fields for hilite conditions -->
+    <field name="$closedWonId" hidden="true"/>
+    <field name="$closedLostId" hidden="true"/>
+
+    <!-- PATTERN: Button with hideIf condition checking user -->
+    <button name="grabOpportunityBtn" icon="fa-suitcase" help="Take charge"
+            onClick="com.axelor.apps.crm.web.OpportunityController:assignToMe"
+            hideIf="user.id == _internalUserId"/>
+
+    <!-- PATTERN: Stage progression buttons with conditional visibility -->
+    <button name="next-stage-gridBtn" icon="fa-chevron-circle-right" help="Next stage"
+            onClick="action-method-opportunity-set-next-stage"
+            hideIf="$get('opportunityStatus.id') == $closedWonId ||
+                    $get('opportunityStatus.id') == $closedLostId"/>
+
+    <button name="closed-wonBtn" icon="fa-check-circle" help="Closed won"
+            onClick="action-method-opportunity-set-stage-closed-won"
+            hideIf="$get('opportunityStatus.id') == $closedWonId"/>
+
+    <button name="closed-lostBtn" icon="fa-minus-circle" help="Closed lost"
+            onClick="action-method-opportunity-set-stage-closed-lost"
+            hideIf="$get('opportunityStatus.id') == $closedLostId"/>
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Grid with Contact Widgets (Phone, Email) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="partner-grid" title="Partners"
+        model="com.axelor.apps.base.db.Partner" orderBy="name">
+
+    <!-- PATTERN: Image field with preview -->
+    <field name="picture" widget="Image" width="50"/>
+
+    <field name="partnerSeq" width="100"/>
+    <field name="fullName" width="200"/>
+
+    <!-- PATTERN: Phone widget for clickable phone numbers -->
+    <field name="fixedPhone" widget="phone" width="120"/>
+    <field name="mobilePhone" widget="phone" width="120"/>
+
+    <!-- PATTERN: Email widget for clickable email addresses -->
+    <field name="emailAddress.address" title="Email" widget="email" width="200"/>
+
+    <!-- PATTERN: URL widget for clickable links -->
+    <field name="webSite" widget="url" width="150"/>
+
+    <field name="partnerCategory" grid-view="partner-category-grid"/>
+
+    <!-- PATTERN: Boolean fields as checkboxes -->
+    <field name="isCustomer" width="80"/>
+    <field name="isSupplier" width="80"/>
+
+    <!-- PATTERN: Related field with x-image-field for avatar -->
+    <field name="user" form-view="user-form" grid-view="user-grid"
+           x-image-field="image" width="150"/>
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 6: Grid with Multiple Ordering and canNew -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="sale-order-line-grid" title="Sale Order Lines"
+        model="com.axelor.apps.sale.db.SaleOrderLine"
+        orderBy="sequence" editable="true" canNew="true">
+
+    <!-- PATTERN: Sequence field for drag-and-drop ordering -->
+    <field name="sequence" width="50"/>
+
+    <!-- PATTERN: Product field with onChange action -->
+    <field name="product" form-view="product-form" grid-view="product-grid"
+           onChange="action-sale-order-line-method-compute-product-information"/>
+
+    <field name="productName" width="200"/>
+
+    <!-- PATTERN: Editable quantity with onChange -->
+    <field name="qty" onChange="action-sale-order-line-method-compute-totals"/>
+
+    <field name="unit" form-view="unit-form" grid-view="unit-grid"/>
+
+    <!-- PATTERN: Currency with scale -->
+    <field name="price" x-scale="saleOrder.currency.numberOfDecimals"/>
+
+    <!-- PATTERN: Discount percentage -->
+    <field name="discountAmount" x-scale="2"/>
+    <field name="discountTypeSelect" widget="single-select"/>
+
+    <!-- PATTERN: Computed readonly totals -->
+    <field name="exTaxTotal" readonly="true" x-scale="saleOrder.currency.numberOfDecimals"/>
+    <field name="inTaxTotal" readonly="true" x-scale="saleOrder.currency.numberOfDecimals"/>
+
+    <!-- PATTERN: Hidden parent reference for scale -->
+    <field name="saleOrder.currency.numberOfDecimals" hidden="true"/>
+
+  </grid>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **Grid View Types**:
+   - **Standalone grids**: Called from menu via action-view, used for main entity lists
+   - **Embedded grids**: Called from forms via panel-related or field, used for related entities
+   - Both share same syntax but embedded grids often have canNew="false"
+
+2. **Toolbar vs Menubar**:
+   - **Toolbar**: Primary actions (print, create, export) - single level
+   - **Menubar**: Secondary/batch actions - can have nested menu structure
+   - Can use both simultaneously (toolbar for main action, menubar for tools)
+
+3. **Hilite Patterns**:
+   - Priority-based: Multiple hilite rules for different priority levels
+   - Status-based: Color coding by entity status
+   - Date-based: Using $moment().diff() for date comparisons
+   - Condition-based: Complex boolean expressions
+   - ID comparison: Using $get() for nested field access
+
+4. **Column Configuration**:
+   - **width**: Pixel width (e.g., "120", "200")
+   - **widget**: Display type (single-select, Progress, phone, email, url, Image)
+   - **x-scale**: Decimal precision (numeric or field reference)
+   - **x-image-field**: Related image field for avatar display
+   - **aggregate**: sum, avg, count for column totals
+   - **hidden**: Hide column but keep in context for conditions
+   - **readonly**: Non-editable in grid (for computed fields)
+   - **if**: Conditional column visibility
+
+5. **Button Conditions**:
+   - **readonlyIf**: Button disabled (greyed out) when true
+   - **hideIf**: Button not shown when true
+   - **showIf**: Button shown only when true
+   - Complex conditions with &&, ||, nested $get() calls
+   - Can reference hidden fields for dependency values
+
+6. **Action Chaining**:
+   - Comma-separated: "save,action-method,save"
+   - Save before: Ensures data persisted before action
+   - Save after: Refresh grid after action completes
+   - Controller methods: "com.package.Controller:methodName"
+
+7. **Hidden Fields Strategy**:
+   - Declare fields needed in conditions but not displayed
+   - Used in hilite if expressions: hidden="true"
+   - Used in button readonlyIf/hideIf: hidden="true"
+   - Nested references: "parent.child.grandchild" hidden="true"
+   - Essential for complex conditional logic without cluttering UI
+
+8. **Field References**:
+   - Direct: field="product"
+   - Nested: field="partner.emailAddress.address"
+   - Using $get(): $get('manufOrder.statusSelect')
+   - Special variables: _internalUserId, __user__, __config__
+
+9. **Widgets for Data Types**:
+   - **single-select**: Selection fields (dropdown)
+   - **Progress**: Percentage as progress bar (0-100)
+   - **phone**: Clickable phone number with dial icon
+   - **email**: Clickable email with mailto: link
+   - **url**: Clickable web link
+   - **Image**: Image preview thumbnail
+   - **html**: Rich text display
+
+10. **Aggregations**:
+    - **sum**: Total of numeric column
+    - **avg**: Average of numeric column
+    - **count**: Count of rows
+    - Displayed in grid footer
+    - Works with filtered/searched data
+
+11. **Editable Grids**:
+    - editable="true": Enable inline editing
+    - canNew="true/false": Control row creation
+    - onChange on fields: Trigger actions on edit
+    - sequence field: Enable drag-and-drop reordering
+
+12. **Best Practices**:
+    - Use toolbar for primary action (1-2 buttons max)
+    - Use menubar for batch/tool actions (group related items)
+    - Hide fields used in conditions to reduce clutter
+    - Use meaningful button icons (fa-play, fa-pause, fa-check)
+    - Add help attribute to buttons for tooltips
+    - Use prompt attribute for destructive menu actions
+    - Order columns by importance (left = most important)
+    - Use width to control column sizing
+    - Add form-view/grid-view for related field navigation
+
+13. **Performance Considerations**:
+    - Limit number of buttons (5-7 max per grid)
+    - Use hidden="true" for condition dependencies
+    - Avoid complex conditions in readonlyIf (use hidden field + simple check)
+    - Use orderBy for default sorting
+    - Limit hilite rules to essential cases (4-5 max)
+
+14. **panel-related Integration**:
+    - Grid embedded via panel-related uses grid-view attribute
+    - Inherits some attributes from panel-related (readonlyIf, height)
+    - canNew from panel-related overrides grid canNew
+    - onChange in panel-related triggers on grid changes
+    - Grid columns width should fit panel colSpan width
+-->

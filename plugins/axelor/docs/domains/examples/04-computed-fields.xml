@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Computed Fields and Formulas
+  Source: axelor-crm/src/main/resources/domains/Lead.xml (AOS 7.4)
+  Complexity: ⭐⭐⭐ Advanced
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - Computed fields with CDATA inline code
+  - SQL formula fields
+  - Transient vs persistent computed fields
+  - namecolumn pattern
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="crm" package="com.axelor.apps.crm.db"/>
+
+  <entity name="Lead">
+
+    <!-- Simple fields -->
+    <string name="firstName" title="First name"/>
+    <string name="name" required="true" title="Last name"/>
+
+    <!--
+      COMPUTED FIELD WITH INLINE CODE:
+      - Uses CDATA to embed Java code
+      - Computed on-the-fly (not stored in database)
+      - Check for null before accessing properties
+    -->
+    <string name="simpleFullName" title="Full name">
+      <![CDATA[
+        if(firstName != null)
+          return firstName+" "+name;
+        else
+          return name;
+      ]]>
+    </string>
+
+    <!--
+      NAME COLUMN:
+      - Special field used as display name
+      - Shown in many-to-one selectors
+      - Can be computed or simple field
+    -->
+    <string name="fullName" title="Contact name" namecolumn="true"/>
+
+    <!-- Relationship for formula examples -->
+    <one-to-many name="eventList"
+      ref="com.axelor.apps.crm.db.Event"
+      title="Events"
+      mappedBy="eventLead"/>
+
+    <!--
+      SQL FORMULA FIELD:
+      - formula="true": value computed by SQL query
+      - NOT stored in database (virtual column)
+      - Query executed when field is accessed
+      - Use for aggregations, subqueries
+    -->
+    <datetime name="lastEventDateT"
+      title="Last event date"
+      formula="true">
+      <![CDATA[
+      SELECT ICAL_EVENT.start_date_time
+      FROM ICAL_EVENT
+      WHERE ICAL_EVENT.event_lead = id
+        AND ICAL_EVENT.end_date_time < NOW()
+      ORDER BY ICAL_EVENT.end_date_time DESC
+      LIMIT 1
+      ]]>
+    </datetime>
+
+    <!--
+      FORMULA FOR NEXT EVENT:
+      Filter future events with specific status
+    -->
+    <datetime name="nextScheduledEventDateT"
+      title="Next scheduled event date"
+      formula="true">
+      <![CDATA[
+      SELECT ICAL_EVENT.start_date_time
+      FROM ICAL_EVENT
+      WHERE ICAL_EVENT.event_lead = id
+        AND ICAL_EVENT.start_date_time > NOW()
+        AND ICAL_EVENT.status_select = 1
+      ORDER BY ICAL_EVENT.start_date_time ASC
+      LIMIT 1
+      ]]>
+    </datetime>
+
+    <!-- Example of transient computed field -->
+    <integer name="leadScoringSelect"
+      title="Lead scoring"
+      transient="true">
+      <![CDATA[
+        // Calculate score based on multiple factors
+        int score = 0;
+
+        if(this.source != null) score += 10;
+        if(this.numberOfEmployees != null && this.numberOfEmployees > 50) {
+          score += 20;
+        }
+        if(this.eventList != null && this.eventList.size() > 3) {
+          score += 15;
+        }
+
+        return score;
+      ]]>
+    </integer>
+
+    <integer name="numberOfEmployees" title="Number of employees"/>
+    <many-to-one name="source"
+      ref="com.axelor.apps.base.db.Source"
+      title="Source"/>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  Key Takeaways:
+
+  1. Inline Computed Fields:
+     <string name="fieldName">
+       <![CDATA[
+         // Java code here
+         return value;
+       ]]>
+     </string>
+
+     - Code runs when field is accessed
+     - Can use 'this' or direct field names
+     - Always check for null
+     - Must return appropriate type
+
+  2. SQL Formula Fields:
+     <datetime name="fieldName" formula="true">
+       <![CDATA[
+         SELECT ...
+         FROM ...
+         WHERE ... = id
+       ]]>
+     </datetime>
+
+     - 'id' references current entity's ID
+     - Use table names (snake_case), not entity names
+     - Column names are snake_case
+     - Query executed on each access (not cached)
+
+  3. Formula Field Performance:
+     - Avoid in grids (executed for each row)
+     - Good for detail forms
+     - Consider denormalization for frequently accessed values
+     - Use index on foreign keys in formula queries
+
+  4. Transient Fields:
+     transient="true"
+     - Not stored in database
+     - Computed each time
+     - Can't be queried in JPQL/SQL
+     - Use for UI calculations only
+
+  5. Name Column Pattern:
+     namecolumn="true"
+     - One per entity (ideally)
+     - Used as display name in selectors
+     - Should be unique and meaningful
+     - Can be computed field
+
+  6. CDATA Best Practices:
+     - Null checks: if(field != null)
+     - Access related entities: this.saleOrder.getOrderNo()
+     - Keep logic simple (complex logic → service layer)
+     - Return statement required
+
+  7. Formula Query Patterns:
+     - Aggregation: SELECT COUNT(*), SUM(), MAX(), etc.
+     - Subquery: correlated with 'id'
+     - Filtering: WHERE table.foreign_key = id
+     - Latest record: ORDER BY date DESC LIMIT 1
+     - Table names: Use database table names (check @Table annotation)
+
+  8. When to Use What:
+     - Simple concatenation → inline CDATA
+     - Aggregation from related records → formula
+     - Complex calculation → service method + transient field
+     - Frequently accessed → denormalize (store in field)
+-->

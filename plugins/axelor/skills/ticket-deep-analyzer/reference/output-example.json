@@ -1,0 +1,164 @@
+{
+  "ticket_id": "104248",
+  "ticket_url": "https://redmine.axelor.com/issues/104248",
+  "analysis_version": "1.0",
+
+  "need": {
+    "id": "NEED-104248",
+    "title": "Blocage paiement HoldBack avant échéances soldées",
+    "type": "bug",
+    "description": "Le système permet le paiement d'une échéance de retenue de garantie (HoldBack) via PaymentSession ou lettrage manuel alors que les autres échéances ne sont pas encore soldées. Le paiement devrait être bloqué avec une alerte.",
+    "summary": "HoldBack payable avant échéances soldées dans PaymentSession/Lettrage"
+  },
+
+  "scope": {
+    "modules": [
+      {"name": "axelor-account", "confidence": 95},
+      {"name": "axelor-bank-payment", "confidence": 70}
+    ],
+    "entities": [
+      {
+        "name": "Invoice",
+        "role": "secondary",
+        "fields": ["invoiceTermList"]
+      },
+      {
+        "name": "InvoiceTerm",
+        "role": "primary",
+        "fields": ["isPaid", "holdBackPercent", "paymentSession"]
+      },
+      {
+        "name": "PaymentSession",
+        "role": "primary",
+        "fields": []
+      },
+      {
+        "name": "Reconcile",
+        "role": "primary",
+        "fields": []
+      }
+    ],
+    "workflows": ["payment-session-validation", "manual-reconcile"],
+    "ui_elements": ["PaymentSession form", "Reconcile action"]
+  },
+
+  "business_rules": [
+    {
+      "id": "BR001",
+      "type": "validation",
+      "description": "Une échéance HoldBack ne peut être payée que si toutes les autres échéances de la facture sont soldées",
+      "conditions": ["invoiceTerm.holdBackPercent > 0", "sibling_terms.allPaid == false"],
+      "expected_behavior": "Blocage avec message d'alerte",
+      "source": "description"
+    }
+  ],
+
+  "bug_analysis": {
+    "current_behavior": "Paiement HoldBack accepté dans PaymentSession et lettrage manuel",
+    "expected_behavior": "Blocage du paiement avec alerte explicite",
+    "reproduction_steps": [
+      "Créer facture fournisseur avec condition Ech. 30/50/15/RG5%",
+      "Valider et ventiler",
+      "Ouvrir PaymentSession, tenter de payer HoldBack"
+    ],
+    "affected_scenarios": ["PaymentSession", "Lettrage manuel"],
+    "working_scenarios": ["Paiement depuis facture", "PaymentVoucher"]
+  },
+
+  "acceptance_criteria": [
+    {
+      "id": "AC001",
+      "description": "PaymentSession bloque le paiement HoldBack si autres échéances non soldées",
+      "type": "functional",
+      "derived_from": "BR001"
+    },
+    {
+      "id": "AC002",
+      "description": "Lettrage manuel bloque le lettrage HoldBack si autres échéances non soldées",
+      "type": "functional",
+      "derived_from": "BR001"
+    },
+    {
+      "id": "AC003",
+      "description": "Message d'alerte explicite affiché à l'utilisateur",
+      "type": "ux",
+      "derived_from": "description"
+    }
+  ],
+
+  "priority_score": {
+    "value": 75,
+    "factors": {
+      "urgency": 60,
+      "impact": 85,
+      "clarity": 90,
+      "frequency": 65
+    }
+  },
+
+  "related_needs": [
+    {
+      "type": "sub_need",
+      "description": "Même validation pour lettrage manuel"
+    }
+  ],
+
+  "metadata": {
+    "tracker": "Anomaly",
+    "status": "New",
+    "priority": "Normal",
+    "author": "Adil Bakari",
+    "created_at": "2025-11-21",
+    "module_redmine": "Accounting/Invoicing"
+  },
+
+  "ready_for_develop": true,
+  "quality_score": 85,
+
+  "aos_validation": {
+    "entities_validated": [
+      {
+        "name": "InvoiceTerm",
+        "exists": true,
+        "file": "axelor-account/.../InvoiceTerm.xml",
+        "package": "com.axelor.apps.account.db"
+      }
+    ],
+    "fields_validated": [
+      {
+        "entity": "InvoiceTerm",
+        "field": "holdBackPercent",
+        "exists": true,
+        "type": "decimal"
+      }
+    ],
+    "fields_missing": [],
+    "validation_score": 95
+  },
+
+  "regression_analysis": {
+    "search_scope": {
+      "repository": "/path/to/axelor-open-suite",
+      "files_analyzed": ["InvoiceTermServiceImpl.java"],
+      "date_range": "2024-11-21 to 2025-11-21"
+    },
+    "suspect_commits": [
+      {
+        "hash": "abc1234",
+        "date": "2025-03-15",
+        "author": "Developer Name",
+        "message": "fix: payment validation logic",
+        "confidence": 80
+      }
+    ],
+    "most_likely_cause": {
+      "commit": "abc1234",
+      "confidence": 80,
+      "evidence": ["Modifies payment validation", "Date matches regression window"],
+      "recommendation": "Review commit abc1234"
+    },
+    "contacts": [
+      {"name": "Developer Name", "email": "dev@axelor.com", "role": "Commit author"}
+    ]
+  }
+}

@@ -1,0 +1,446 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Complex Conditional Logic and Dynamic Behavior
+SOURCE: axelor-open-suite/axelor-sale/SaleOrder.xml + axelor-account/AccountConfig.xml
+BEST PRACTICE: Using showIf, hideIf, readonlyIf, requiredIf for dynamic forms
+CONTEXT: Forms requiring field visibility, editability, and requirement based on state
+KEY PATTERNS:
+- showIf/hideIf for conditional visibility
+- readonlyIf for conditional editability
+- requiredIf for conditional validation
+- Complex boolean expressions with &&, ||, !, ==, !=
+- Cascading visibility (parent panel controls children)
+- Domain expressions for filtering
+- Nested conditions
+- State-based form behavior
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Basic Conditional Visibility -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="sale-order-form" title="Sale Order"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <panel name="mainPanel">
+      <!-- PATTERN: Simple showIf condition -->
+      <field name="statusSelect" colSpan="12" widget="NavSelect"/>
+
+      <!-- PATTERN: Show field only when status is confirmed -->
+      <field name="confirmDate" colSpan="6" showIf="statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Hide field after confirmation -->
+      <field name="estimatedDeliveryDate" colSpan="6" hideIf="statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Show based on type selection -->
+      <field name="orderTypeSelect" colSpan="6"/>
+      <field name="deliveryAddress" colSpan="6" showIf="orderTypeSelect == 1"/>
+      <field name="serviceDeliveryMode" colSpan="6" showIf="orderTypeSelect == 2"/>
+
+      <!-- PATTERN: Complex boolean condition with AND -->
+      <field name="invoiceAddress" colSpan="6"
+             showIf="orderTypeSelect == 1 &amp;&amp; partner != null"/>
+
+      <!-- PATTERN: Complex boolean condition with OR -->
+      <field name="urgentDelivery" colSpan="3"
+             showIf="statusSelect == 3 || statusSelect == 4"/>
+
+      <!-- PATTERN: Negation with NOT -->
+      <field name="cancellationReason" colSpan="12"
+             showIf="!id || statusSelect == 5"/>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Conditional Editability (readonlyIf) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="invoice-form" title="Invoice"
+        model="com.axelor.apps.account.db.Invoice">
+
+    <panel name="mainPanel">
+      <!-- PATTERN: Readonly after validation -->
+      <field name="partner" readonlyIf="statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Readonly when record exists and has specific status -->
+      <field name="invoiceDate" readonlyIf="id &amp;&amp; statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Readonly based on permission or status -->
+      <field name="paymentMode"
+             readonlyIf="statusSelect &gt;= 3 || !__user__.hasRole('admin')"/>
+
+      <!-- PATTERN: Readonly using special function $readonly() -->
+      <field name="totalAmount" readonlyIf="$readonly()"/>
+
+      <!-- PATTERN: Complex readonly condition -->
+      <field name="dueDate"
+             readonlyIf="(statusSelect &gt;= 3 &amp;&amp; move != null) || operationTypeSelect == 2"/>
+
+      <!-- PATTERN: Readonly all fields in panel -->
+      <panel name="detailsPanel" title="Details" readonlyIf="statusSelect == 3">
+        <field name="description" colSpan="12"/>
+        <field name="internalReference" colSpan="6"/>
+        <field name="externalReference" colSpan="6"/>
+      </panel>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Conditional Requirements (requiredIf) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="purchase-order-form" title="Purchase Order"
+        model="com.axelor.apps.purchase.db.PurchaseOrder">
+
+    <panel name="mainPanel">
+      <!-- PATTERN: Required only when specific type selected -->
+      <field name="orderTypeSelect" colSpan="6"/>
+      <field name="deliveryAddress" colSpan="6"
+             requiredIf="orderTypeSelect == 1"/>
+
+      <!-- PATTERN: Required based on status progression -->
+      <field name="receiptDate" colSpan="6"
+             requiredIf="statusSelect &gt;= 4"/>
+
+      <!-- PATTERN: Required based on boolean flag -->
+      <field name="requiresApproval" colSpan="3"/>
+      <field name="approvalDate" colSpan="6"
+             requiredIf="requiresApproval &amp;&amp; statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Conditionally required with complex logic -->
+      <field name="shipmentMode" colSpan="6"
+             requiredIf="orderTypeSelect == 1 &amp;&amp; (totalAmount &gt; 1000 || urgentDelivery)"/>
+
+      <!-- PATTERN: Required when field is visible and editable -->
+      <field name="cancellationJustification" colSpan="12"
+             showIf="statusSelect == 5"
+             requiredIf="statusSelect == 5"/>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Cascading Panel Visibility -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="account-config-form" title="Account Configuration"
+        model="com.axelor.apps.account.db.AccountConfig">
+
+    <panel name="mainPanel">
+      <field name="company" colSpan="12"/>
+
+      <!-- PATTERN: Parent panel controls visibility -->
+      <panel name="invoicePanel" title="Invoice Configuration"
+             showIf="company != null" colSpan="12">
+
+        <field name="hasInvoiceWatermark" colSpan="3"/>
+
+        <!-- PATTERN: Nested conditional visibility -->
+        <panel name="watermarkPanel" title="Watermark Settings"
+               showIf="hasInvoiceWatermark" colSpan="12">
+          <field name="invoiceWatermarkText" colSpan="6" requiredIf="hasInvoiceWatermark"/>
+          <field name="invoiceWatermarkFont" colSpan="6"/>
+        </panel>
+
+        <field name="hasAutomaticInvoiceNumbering" colSpan="3"/>
+
+        <!-- PATTERN: Panel shown when parent field is true -->
+        <panel name="numberingPanel" title="Numbering Configuration"
+               showIf="hasAutomaticInvoiceNumbering" colSpan="12">
+          <field name="customerInvoiceSequence" colSpan="6"
+                 requiredIf="hasAutomaticInvoiceNumbering"/>
+          <field name="supplierInvoiceSequence" colSpan="6"
+                 requiredIf="hasAutomaticInvoiceNumbering"/>
+        </panel>
+      </panel>
+
+      <!-- PATTERN: Multiple cascading levels -->
+      <panel name="paymentPanel" title="Payment Configuration"
+             showIf="company != null" colSpan="12">
+
+        <field name="hasAutomaticPaymentValidation" colSpan="4"/>
+
+        <panel name="paymentValidationPanel"
+               showIf="hasAutomaticPaymentValidation" colSpan="12">
+
+          <field name="paymentValidationThreshold" colSpan="6"
+                 requiredIf="hasAutomaticPaymentValidation"/>
+
+          <!-- PATTERN: Triple-nested conditional -->
+          <field name="requiresApprovalAboveThreshold" colSpan="6"
+                 showIf="hasAutomaticPaymentValidation"/>
+
+          <panel name="approvalPanel" title="Approval Settings"
+                 showIf="hasAutomaticPaymentValidation &amp;&amp; requiresApprovalAboveThreshold">
+            <field name="approverUser" colSpan="6"
+                   requiredIf="requiresApprovalAboveThreshold"/>
+            <field name="approvalTimeLimit" colSpan="6"/>
+          </panel>
+        </panel>
+      </panel>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Domain Filtering with Conditional Logic -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="sale-order-advanced-form" title="Sale Order"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <panel name="mainPanel">
+      <field name="company" colSpan="6"/>
+      <field name="partner" colSpan="6"/>
+
+      <!-- PATTERN: Domain filtered by company -->
+      <field name="priceList" colSpan="6"
+             domain="self.company = :company AND self.isActive = true"/>
+
+      <!-- PATTERN: Domain with multiple conditions -->
+      <field name="deliveryAddress" colSpan="6"
+             domain="self.partner = :partner AND self.isDeliveryAddress = true"/>
+
+      <!-- PATTERN: Conditional domain based on type -->
+      <field name="orderTypeSelect" colSpan="6"/>
+      <field name="warehouse" colSpan="6"
+             showIf="orderTypeSelect == 1"
+             domain="self.company = :company AND self.typeSelect = 1"/>
+
+      <!-- PATTERN: Domain with date range -->
+      <field name="validityDate" colSpan="6"/>
+      <field name="contractTemplate" colSpan="6"
+             domain="self.validFrom &lt;= :validityDate AND (self.validTo IS NULL OR self.validTo &gt;= :validityDate)"/>
+
+      <!-- PATTERN: Complex domain with OR conditions -->
+      <field name="paymentCondition" colSpan="6"
+             domain="(self.company = :company OR self.company IS NULL) AND self.isActive = true"/>
+
+      <!-- PATTERN: Self-referential domain (exclude current record) -->
+      <field name="parentOrder" colSpan="6"
+             domain="self.id != :id AND self.partner = :partner"/>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 6: Button Conditional Visibility and State -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="project-form" title="Project"
+        model="com.axelor.apps.project.db.Project">
+
+    <panel name="mainPanel">
+      <field name="statusSelect" widget="NavSelect" colSpan="12"/>
+    </panel>
+
+    <panel name="actionsPanel" sidebar="true">
+      <!-- PATTERN: Button shown only when record exists -->
+      <button name="startBtn" title="Start Project" icon="fa-play"
+              showIf="id &amp;&amp; statusSelect == 1"
+              onClick="save,action-project-method-start"/>
+
+      <!-- PATTERN: Button shown based on status -->
+      <button name="pauseBtn" title="Pause" icon="fa-pause"
+              showIf="statusSelect == 2"
+              onClick="save,action-project-method-pause"/>
+
+      <!-- PATTERN: Button hidden when completed or cancelled -->
+      <button name="completeBtn" title="Complete" icon="fa-check"
+              hideIf="statusSelect &gt;= 4"
+              onClick="save,action-project-group-complete"/>
+
+      <!-- PATTERN: Readonly button (disabled state) -->
+      <button name="invoiceBtn" title="Generate Invoice" icon="fa-file-text-o"
+              showIf="statusSelect == 4"
+              readonlyIf="invoiced"
+              onClick="save,action-project-method-generate-invoice"/>
+
+      <!-- PATTERN: Complex button visibility -->
+      <button name="reopenBtn" title="Reopen" icon="fa-undo"
+              showIf="(statusSelect == 4 || statusSelect == 5) &amp;&amp; !invoiced"
+              onClick="action-project-validate-reopen,save,action-project-method-reopen"/>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 7: Tab-Level Conditional Visibility -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="product-form" title="Product"
+        model="com.axelor.apps.base.db.Product">
+
+    <panel name="mainPanel">
+      <field name="productTypeSelect" colSpan="6"/>
+      <field name="name" colSpan="6"/>
+    </panel>
+
+    <panel-tabs name="detailsTabs">
+      <!-- PATTERN: Tab shown only for specific product type -->
+      <panel name="stockPanel" title="Stock Management"
+             showIf="productTypeSelect == 'storable'">
+        <field name="unit" colSpan="6"/>
+        <field name="minQty" colSpan="6"/>
+      </panel>
+
+      <!-- PATTERN: Tab shown for services -->
+      <panel name="servicePanel" title="Service Details"
+             showIf="productTypeSelect == 'service'">
+        <field name="serviceUnit" colSpan="6"/>
+        <field name="defaultDuration" colSpan="6"/>
+      </panel>
+
+      <!-- PATTERN: Tab always visible -->
+      <panel name="pricingPanel" title="Pricing">
+        <field name="salePrice" colSpan="6"/>
+        <field name="purchasePrice" colSpan="6"/>
+      </panel>
+
+      <!-- PATTERN: Tab shown only when record saved -->
+      <panel name="historyPanel" title="History" showIf="id">
+        <field name="createdOn" readonly="true" colSpan="6"/>
+        <field name="updatedOn" readonly="true" colSpan="6"/>
+      </panel>
+    </panel-tabs>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 8: Combining Multiple Conditional Attributes -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="employee-form" title="Employee"
+        model="com.axelor.apps.hr.db.Employee">
+
+    <panel name="mainPanel">
+      <field name="hireDate" colSpan="6"/>
+      <field name="employmentTypeSelect" colSpan="6"/>
+
+      <!-- PATTERN: Field with multiple conditional attributes -->
+      <field name="probationEndDate" colSpan="6"
+             showIf="employmentTypeSelect == 1"
+             requiredIf="employmentTypeSelect == 1 &amp;&amp; hireDate != null"
+             readonlyIf="statusSelect &gt;= 3"/>
+
+      <!-- PATTERN: Conditional visibility, requirement, and domain -->
+      <field name="manager" colSpan="6"
+             showIf="employmentTypeSelect != null"
+             requiredIf="employmentTypeSelect == 1 || employmentTypeSelect == 2"
+             domain="self.isManager = true AND self.company = :company"
+             readonlyIf="statusSelect == 4"/>
+
+      <!-- PATTERN: Panel with multiple conditions -->
+      <panel name="contractPanel" title="Contract Details"
+             showIf="employmentTypeSelect != null &amp;&amp; hireDate != null"
+             readonlyIf="statusSelect == 4">
+
+        <field name="contractType" colSpan="6"
+               requiredIf="employmentTypeSelect == 1"/>
+        <field name="contractEndDate" colSpan="6"
+               showIf="contractType != null &amp;&amp; contractType.hasEndDate"
+               requiredIf="contractType != null &amp;&amp; contractType.hasEndDate"/>
+      </panel>
+    </panel>
+
+  </form>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **showIf / hideIf**: Control element visibility
+   - showIf: Element visible when condition is TRUE
+   - hideIf: Element hidden when condition is TRUE
+   - Use showIf for clarity when condition is positive
+   - Use hideIf when condition is simpler in negative form
+   - Hidden elements are not rendered in DOM (performance benefit)
+
+2. **readonlyIf**: Control element editability
+   - Field becomes read-only when condition is TRUE
+   - Different from hidden: field still visible but not editable
+   - Can apply to individual fields or entire panels
+   - Use $readonly() function for standard read mode detection
+   - Common pattern: readonlyIf="statusSelect >= X" for workflow states
+
+3. **requiredIf**: Conditional validation
+   - Field becomes required when condition is TRUE
+   - Validation occurs on save
+   - Often combined with showIf (required when visible)
+   - Use for fields that are contextually mandatory
+   - Red asterisk appears when condition is true
+
+4. **Boolean Operators**:
+   - && (AND): Both conditions must be true
+   - || (OR): At least one condition must be true
+   - ! (NOT): Negates the condition
+   - Use &amp;&amp; in XML (escaped ampersand)
+   - Parentheses for grouping: (a || b) &amp;&amp; c
+
+5. **Comparison Operators**:
+   - == (equals), != (not equals)
+   - &gt; (greater than), &lt; (less than)
+   - &gt;= (greater or equal), &lt;= (less or equal)
+   - Use XML entities: &gt; &lt; &amp;
+
+6. **Field References**:
+   - Direct field access: statusSelect, partner, company
+   - Nested field access: partner.category, company.currency
+   - Special variables: id, __user__, __config__
+   - Null checks: field != null, field == null
+
+7. **Domain Filtering**:
+   - Filter related field options dynamically
+   - Reference parent fields with :fieldName
+   - Combine multiple conditions with AND/OR
+   - Use IS NULL for null checks in domain
+   - Self-referential: self.id != :id
+
+8. **Cascading Conditions**:
+   - Parent panel visibility affects children
+   - Combine panel-level and field-level conditions
+   - Can create 3+ levels of nesting
+   - Inner conditions only evaluated if parent is visible
+
+9. **Special Functions**:
+   - $readonly(): Returns true in view mode
+   - __user__.hasRole('role'): Permission check
+   - __config__.date: Current date
+   - $get('fieldName'): Get field value
+
+10. **Performance Best Practices**:
+    - Use showIf to avoid rendering unnecessary elements
+    - Prefer simple conditions over complex nested logic
+    - Cache complex condition results in hidden fields
+    - Use panel-level conditions to hide entire sections
+    - Combine conditions when possible: showIf + requiredIf on same field
+
+11. **Common Patterns**:
+    - Status-based: statusSelect == 1, statusSelect >= 3
+    - Type-based: typeSelect == 'value'
+    - Existence: id != null, field == null
+    - Permission: __user__.hasRole('admin')
+    - State + permission: statusSelect < 3 &amp;&amp; __user__.hasRole('manager')
+
+12. **Button Conditions**:
+    - showIf/hideIf for button visibility
+    - readonlyIf for disabled state (greyed out)
+    - Combine with onClick action chains
+    - Common: showIf="id" for saved records only
+-->

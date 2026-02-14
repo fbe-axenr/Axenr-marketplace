@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pattern: Advanced Relationships
+  Source: axelor-sale/src/main/resources/domains/SaleOrderLine.xml (AOS 7.4)
+  Complexity: ⭐⭐⭐ Advanced
+
+  IMPORTANT: XSD Version
+  This example uses domain-models_7.4.xsd as reference.
+  YOU MUST change the XSD version to match YOUR project's AOP version:
+  - AOP 7.1.x → domain-models_7.1.xsd
+  - AOP 7.4.x → domain-models_7.4.xsd
+  - AOP 8.0.x → domain-models_8.0.xsd
+
+  This example demonstrates:
+  - Self-referencing relationships
+  - Hierarchical structures
+  - Many-to-many relationships
+  - Bidirectional one-to-many
+-->
+<domain-models xmlns="http://axelor.com/xml/ns/domain-models"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/domain-models
+  https://axelor.com/xml/ns/domain-models/domain-models_7.4.xsd">
+
+  <module name="sale" package="com.axelor.apps.sale.db"/>
+
+  <entity name="SaleOrderLine">
+
+    <!-- Basic identification -->
+    <string name="fullName" namecolumn="true"/>
+    <integer name="sequence" title="Seq."/>
+
+    <!-- Parent order -->
+    <many-to-one name="saleOrder"
+      ref="com.axelor.apps.sale.db.SaleOrder"
+      title="Sale order"/>
+
+    <!-- Product -->
+    <many-to-one name="product"
+      ref="com.axelor.apps.base.db.Product"
+      title="Product"/>
+    <string name="productName" title="Displayed Product name"/>
+
+    <!--
+      SELF-REFERENCING PATTERN:
+      Lines can be complementary to a main line
+      Creates a tree structure: main line → complementary lines
+    -->
+
+    <!-- Collection of complementary lines (children) -->
+    <one-to-many name="complementarySaleOrderLineList"
+      ref="com.axelor.apps.sale.db.SaleOrderLine"
+      title="Complementary lines"
+      mappedBy="mainSaleOrderLine"/>
+
+    <!-- Reference to main line (parent) -->
+    <many-to-one name="mainSaleOrderLine"
+      ref="com.axelor.apps.sale.db.SaleOrderLine"
+      title="Main line"/>
+
+    <!--
+      MANY-TO-MANY PATTERN:
+      Multiple lines can have multiple taxes
+
+      BEST PRACTICE: Always specify mappedBy for bidirectional relationships
+      - Without mappedBy: Join table without FK constraints
+      - With mappedBy: Proper bidirectional with constraints
+      - Owner side: entity without mappedBy
+      - Inverse side: entity with mappedBy (this one)
+    -->
+    <many-to-many name="taxLineSet"
+      ref="com.axelor.apps.account.db.TaxLine"
+      title="Taxes"
+      mappedBy="saleOrderLines"/>
+
+    <!--
+      CROSS-MODULE RELATIONSHIPS:
+      Referencing entities from other modules
+    -->
+    <many-to-one name="supplierPartner"
+      ref="com.axelor.apps.base.db.Partner"
+      title="Supplier"/>
+
+    <many-to-one name="unit"
+      ref="com.axelor.apps.base.db.Unit"
+      title="Unit"/>
+
+    <!--
+      VERSIONING PATTERN:
+      Keep reference to previous version
+    -->
+    <integer name="versionNumber"
+      title="Version Number"
+      readonly="true"
+      default="1"/>
+
+    <datetime name="versionDateT"
+      title="Version date"
+      readonly="true"/>
+
+    <many-to-one name="oldVersionSaleOrder"
+      ref="com.axelor.apps.sale.db.SaleOrder"
+      title="Previous version"/>
+
+    <!--
+      ONE-TO-MANY to association entity:
+      When many-to-many needs additional attributes
+    -->
+    <one-to-many name="selectedComplementaryProductList"
+      ref="com.axelor.apps.sale.db.ComplementaryProductSelected"
+      title="Complementary products"
+      mappedBy="saleOrderLine"/>
+
+  </entity>
+
+  <!--
+    ASSOCIATION ENTITY:
+    Used when many-to-many needs extra attributes
+  -->
+  <entity name="ComplementaryProductSelected">
+
+    <!-- Link to line -->
+    <many-to-one name="saleOrderLine"
+      ref="com.axelor.apps.sale.db.SaleOrderLine"
+      required="true"/>
+
+    <!-- Link to product -->
+    <many-to-one name="product"
+      ref="com.axelor.apps.base.db.Product"
+      required="true"/>
+
+    <!-- Additional attributes on the association -->
+    <integer name="quantity" title="Quantity" default="1"/>
+    <boolean name="selected" title="Selected" default="false"/>
+
+    <!-- Unique constraint: one product per line -->
+    <unique-constraint columns="saleOrderLine,product"/>
+
+  </entity>
+
+</domain-models>
+
+<!--
+  Key Takeaways:
+
+  1. Self-Referencing Relationships:
+     <!-- Children collection -->
+     <one-to-many name="children" ref="SameEntity"
+       mappedBy="parent"/>
+
+     <!-- Parent reference -->
+     <many-to-one name="parent" ref="SameEntity"/>
+
+     - Creates tree/hierarchy structure
+     - Use for: categories, organizational units, bill of materials
+     - Be careful with cycles (prevent in service layer)
+
+  2. Many-to-Many Pattern:
+     <many-to-many name="tags" ref="Tag" title="Tags" mappedBy="entities"/>
+
+     - ALWAYS use mappedBy for bidirectional relationships
+     - Without mappedBy: join table without FK constraints (data integrity issues)
+     - With mappedBy: proper bidirectional with DB constraints
+     - Generates join table automatically
+     - Join table name: {entity1}_{entity2}
+     - Use when no additional attributes needed
+
+  3. Many-to-Many with Attributes (Association Entity):
+     Instead of:
+       <many-to-many name="products" ref="Product"/>
+
+     Use association entity:
+       <one-to-many name="productLinks" ref="OrderProductLink"
+         mappedBy="order"/>
+
+     OrderProductLink entity:
+       <many-to-one name="order" ref="Order"/>
+       <many-to-one name="product" ref="Product"/>
+       <integer name="quantity"/>
+       <unique-constraint columns="order,product"/>
+
+  4. Cross-Module References:
+     - Use fully qualified names: com.axelor.apps.base.db.Partner
+     - Modules must be in dependency tree
+     - Common base entities: Company, Partner, User, Product
+
+  5. Versioning Pattern:
+     - versionNumber: integer counter
+     - versionDateT: timestamp of versioning
+     - oldVersionEntity: reference to previous version
+     - All readonly (managed by service)
+
+  6. Hierarchical Query Considerations:
+     - Avoid deep nesting (performance)
+     - Consider denormalization for frequently accessed paths
+     - Add helper methods in extra-code for tree navigation
+     - Index on parent field: <index columns="parent"/>
+
+  7. Association Entity Best Practices:
+     - Required references to both sides
+     - Unique constraint to prevent duplicates
+     - Add sequence if order matters
+     - Name clearly: {Entity1}{Entity2}Link or {Purpose}
+
+  8. Many-to-Many vs Association Entity:
+     Use many-to-many when:
+       - No additional attributes
+       - Simple tag/category associations
+
+     Use association entity when:
+       - Need attributes (quantity, date, status)
+       - Need unique constraints
+       - Need to track who/when created link
+       - Need business logic on association
+-->

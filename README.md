@@ -8,24 +8,25 @@ Marketplace interne d'agents auto-apprenants pour le developpement Axelor ERP et
 
 ## Installation
 
-### 1. Cloner le repo
+### 1. Ajouter le marketplace dans Claude Code
 
-```bash
-git clone --recursive <url-axenr-marketplace>
-cd axenr-marketplace
+```
+/plugin marketplace add fbe-axenr/Axenr-marketplace
 ```
 
-### 2. Ajouter le plugin a Claude Code
+### 2. Installer le plugin
 
-```bash
-claude plugin add ./plugins/axenr
+```
+/plugin install axenr@fbe-axenr-Axenr-marketplace
 ```
 
-### 3. Verifier l'installation
+### 3. Verifier
 
-```bash
-claude /axenr:solve-ticket --help
 ```
+/plugin
+```
+
+Aller sur l'onglet **Installed** pour confirmer.
 
 ## Commandes disponibles
 
@@ -75,13 +76,12 @@ claude /axenr:solve-ticket --help
 ```
 axenr-marketplace/
 ├── plugins/
-│   ├── axenr/                    # Agents maison AxENR
-│   │   ├── agents/               # ticket-solver-agent
-│   │   ├── skills/               # error-learner, knowledge-updater, pre-flight-checker
-│   │   ├── commands/             # solve-ticket, solve-batch, learn-review
-│   │   ├── docs/lessons/         # LESSONS-LEARNED.md (memoire)
-│   │   └── templates/            # Templates de sortie
-│   └── axelor-partner/           # Git submodule - agents Axelor (18 agents, 32+ skills)
+│   └── axenr/                    # Agents maison AxENR
+│       ├── agents/               # ticket-solver-agent
+│       ├── skills/               # error-learner, knowledge-updater, pre-flight-checker
+│       ├── commands/             # solve-ticket, solve-batch, learn-review
+│       ├── docs/lessons/         # LESSONS-LEARNED.md (memoire)
+│       └── templates/            # Templates de sortie
 ├── CLAUDE.md                     # Regles globales
 └── README.md
 ```
@@ -98,33 +98,14 @@ L'agent apprend de ses erreurs :
 
 ## Agents partenaire (Axelor)
 
-Les agents du partenaire sont disponibles via 2 methodes :
+Les agents du partenaire sont installes separement via leur propre marketplace :
 
-### Methode 1 : Git submodule (inclus dans ce repo)
-
-```bash
-# Deja inclus si clone avec --recursive
-git submodule update --init --recursive
-
-# Mettre a jour
-cd plugins/axelor-partner
-git pull origin main
-cd ../..
-git add plugins/axelor-partner
-git commit -m "chore(deps): update axelor partner agents"
 ```
-
-### Methode 2 : Installation directe via Claude Code
-
-```bash
-# Ajouter le marketplace partenaire
 /plugin marketplace add git@git.axelor.com:ia-tools/axelor-claude-marketplace.git
-
-# Installer le plugin
 /plugin install axelor
 ```
 
-### Agents disponibles
+### Agents disponibles (18 agents, 32+ skills)
 
 Agents de generation : `domain-agent`, `view-agent`, `java-agent`, `test-agent`
 
@@ -132,6 +113,6 @@ Agents de validation : `code-reviewer`, `code-analyzer`, `axelor-xml-validator`,
 
 ## Mise a jour
 
-```bash
-git pull origin main --recurse-submodules
+```
+/plugin marketplace update fbe-axenr-Axenr-marketplace
 ```

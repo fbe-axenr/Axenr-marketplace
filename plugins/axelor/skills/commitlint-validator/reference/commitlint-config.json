@@ -1,0 +1,138 @@
+{
+  "extends": ["@commitlint/config-conventional"],
+  "description": "Axelor project conventional commit configuration",
+  "rules": {
+    "type-enum": {
+      "level": 2,
+      "applicable": "always",
+      "value": [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "revert"
+      ],
+      "description": "Type must be one of the allowed values"
+    },
+    "type-case": {
+      "level": 2,
+      "applicable": "always",
+      "value": "lower-case",
+      "description": "Type must be lowercase"
+    },
+    "type-empty": {
+      "level": 2,
+      "applicable": "never",
+      "description": "Type cannot be empty"
+    },
+    "scope-case": {
+      "level": 2,
+      "applicable": "always",
+      "value": "lower-case",
+      "description": "Scope must be lowercase"
+    },
+    "subject-empty": {
+      "level": 2,
+      "applicable": "never",
+      "description": "Subject cannot be empty"
+    },
+    "subject-full-stop": {
+      "level": 2,
+      "applicable": "never",
+      "value": ".",
+      "description": "Subject must not end with a period"
+    },
+    "subject-case": {
+      "level": 2,
+      "applicable": "never",
+      "value": ["sentence-case", "start-case", "pascal-case", "upper-case"],
+      "description": "Subject must not use sentence-case, start-case, pascal-case, or upper-case"
+    },
+    "header-max-length": {
+      "level": 2,
+      "applicable": "always",
+      "value": 100,
+      "description": "Header must not exceed 100 characters"
+    },
+    "body-leading-blank": {
+      "level": 1,
+      "applicable": "always",
+      "description": "Body should have a leading blank line (warning)"
+    },
+    "body-max-line-length": {
+      "level": 2,
+      "applicable": "always",
+      "value": 100,
+      "description": "Body lines must not exceed 100 characters"
+    },
+    "footer-leading-blank": {
+      "level": 1,
+      "applicable": "always",
+      "description": "Footer should have a leading blank line (warning)"
+    },
+    "footer-max-line-length": {
+      "level": 2,
+      "applicable": "always",
+      "value": 100,
+      "description": "Footer lines must not exceed 100 characters"
+    }
+  },
+  "additionalRules": {
+    "no-emoji": {
+      "level": 2,
+      "description": "No emojis allowed in any part of commit message"
+    },
+    "language-english": {
+      "level": 2,
+      "description": "Commit messages must be in English"
+    }
+  },
+  "typeDescriptions": {
+    "feat": "A new feature",
+    "fix": "A bug fix",
+    "docs": "Documentation only changes",
+    "style": "Code style/formatting (no functional change)",
+    "refactor": "Code refactoring (no functional change)",
+    "perf": "Performance improvements",
+    "test": "Adding or updating tests",
+    "build": "Changes to build system or dependencies",
+    "ci": "Changes to CI/CD configuration",
+    "chore": "Other changes (maintenance, etc.)",
+    "revert": "Revert a previous commit"
+  },
+  "examples": {
+    "valid": [
+      "feat: add user authentication",
+      "feat(auth): add JWT token support",
+      "fix: resolve login timeout issue",
+      "fix(api): handle null pointer in user service",
+      "docs: update installation guide",
+      "style: format code with prettier",
+      "refactor(core): simplify validation logic",
+      "perf: optimize database queries",
+      "test: add unit tests for user service",
+      "build: update gradle dependencies",
+      "ci: add sonarqube integration",
+      "chore: update gitignore",
+      "revert: revert feat: add user authentication"
+    ],
+    "invalid": [
+      "Feature: add authentication (wrong type format)",
+      "feat:add authentication (missing space after colon)",
+      "feat: Add Authentication (wrong subject case)",
+      "feat: add authentication. (trailing period)",
+      "feat add authentication (missing colon)",
+      "feat(Auth): add authentication (wrong scope case)",
+      "authentication feature added (no type)",
+      "feat: (empty subject)",
+      "feat: add comprehensive user authentication system with JWT tokens and refresh token rotation capabilities (too long)",
+      "feat: add authentication ✨ (emoji not allowed)"
+    ]
+  }
+}

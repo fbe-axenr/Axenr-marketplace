@@ -1,0 +1,282 @@
+# =============================================================================
+# Axelor Component Catalog - Dev/QA/PM Estimates (in hours)
+# =============================================================================
+# This file serves as configuration for the epic_estimator.py script
+# and documentation for teams.
+#
+# Format: category -> component -> {dev, qa, pm, [optional thresholds], [description]}
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# DOMAINS (XML Entities)
+# -----------------------------------------------------------------------------
+domains:
+  simple:
+    dev: 0.5
+    qa: 0.25
+    pm: 0.25
+    fields_max: 10
+    description: "5-10 fields, 0-2 relations"
+    examples:
+      - "Simple configuration entity"
+      - "Reference table (statuses, types)"
+
+  medium:
+    dev: 0.75
+    qa: 0.25
+    pm: 0.25
+    fields_max: 15
+    description: "10-15 fields, 3-5 relations"
+    examples:
+      - "Standard business entity"
+      - "AOS entity extension"
+
+  complex:
+    dev: 1
+    qa: 0.5
+    pm: 0.5
+    fields_max: 20
+    description: "15-20 fields, 5+ relations, custom validations"
+    examples:
+      - "Complex business entity with workflow"
+      - "Entity with computed fields"
+
+# -----------------------------------------------------------------------------
+# VIEWS (Grid, Form, Dashboard)
+# -----------------------------------------------------------------------------
+views:
+  grid_simple:
+    dev: 0.25
+    qa: 0.25
+    pm: 0.25
+    columns_max: 7
+    description: "5-7 columns, basic sort/filter"
+
+  grid_complex:
+    dev: 1
+    qa: 0.5
+    pm: 0.25
+    columns_max: 12
+    description: "8-12 columns, advanced filters, conditional styles, custom widgets"
+
+  form_simple:
+    dev: 0.5
+    qa: 0.25
+    pm: 0.25
+    panels_max: 1
+    description: "1 panel, 5-10 fields"
+
+  form_medium:
+    dev: 0.75
+    qa: 0.5
+    pm: 0.25
+    panels_max: 3
+    description: "2-3 panels, 10-20 fields, some conditions"
+
+  form_complex:
+    dev: 2
+    qa: 0.75
+    pm: 0.25
+    panels_max: 4
+    description: "4+ panels, complex widgets, tabs"
+
+  dashboard_simple:
+    dev: 1
+    qa: 0.5
+    pm: 0.25
+    dashlets_max: 3
+    description: "2-3 simple dashlets"
+
+  dashboard_complex:
+    dev: 6
+    qa: 2.5
+    pm: 1
+    dashlets_max: 6
+    description: "4-6 dashlets, varied charts"
+
+# -----------------------------------------------------------------------------
+# BUSINESS SERVICES
+# -----------------------------------------------------------------------------
+services:
+  simple:
+    dev: 0.5
+    qa: 0.5
+    pm: 0.25
+    methods_max: 2
+    description: "1-2 simple methods, CRUD"
+
+  medium:
+    dev: 2
+    qa: 0.75
+    pm: 0.25
+    methods_max: 4
+    description: "2-4 methods, business logic, validations"
+
+  complex:
+    dev: 4
+    qa: 1
+    pm: 0.5
+    methods_max: 6
+    description: "4+ methods, complex logic, transactions"
+
+# -----------------------------------------------------------------------------
+# CONTROLLERS
+# -----------------------------------------------------------------------------
+controllers:
+  simple:
+    dev: 0.5
+    qa: 0.25
+    pm: 0
+    methods_max: 2
+    description: "1-2 action-methods"
+
+  medium:
+    dev: 0.5
+    qa: 0.25
+    pm: 0.25
+    methods_max: 5
+    description: "3-5 action-methods, validation"
+
+  complex:
+    dev: 2
+    qa: 0.75
+    pm: 0.5
+    methods_max: 8
+    description: "6+ action-methods, file handling"
+
+# -----------------------------------------------------------------------------
+# WORKFLOWS
+# -----------------------------------------------------------------------------
+workflows:
+  simple:
+    dev: 1
+    qa: 0.75
+    pm: 0.5
+    states_max: 4
+    description: "3-4 states, linear flow"
+
+  medium:
+    dev: 2
+    qa: 1
+    pm: 0.5
+    states_max: 7
+    description: "5-7 states, branches, validations"
+
+  complex:
+    dev: 4
+    qa: 1.5
+    pm: 1
+    states_max: 10
+    description: "8+ states, complex rules, notifications"
+
+# -----------------------------------------------------------------------------
+# INTEGRATIONS
+# -----------------------------------------------------------------------------
+integrations:
+  import_simple:
+    dev: 2
+    qa: 1
+    pm: 0.25
+    description: "Simple CSV import, fixed columns"
+
+  import_complex:
+    dev: 4
+    qa: 1.5
+    pm: 1
+    description: "Import with mapping, duplicate handling, validation"
+
+  api_rest:
+    dev: 2
+    qa: 0.75
+    pm: 0.25
+    description: "Simple REST API call"
+
+  api_oauth:
+    dev: 4
+    qa: 1
+    pm: 0.5
+    description: "API with OAuth authentication"
+
+  webhook:
+    dev: 3
+    qa: 1.5
+    pm: 0.5
+    description: "Webhook reception"
+
+  batch:
+    dev: 1.5
+    qa: 1
+    pm: 0.5
+    description: "Batch processing"
+
+# -----------------------------------------------------------------------------
+# REPORTS (BIRT)
+# -----------------------------------------------------------------------------
+reports:
+  birt_simple:
+    dev: 3
+    qa: 1
+    pm: 0.5
+    description: "Simple report, list or table"
+
+  birt_complex:
+    dev: 6
+    qa: 2
+    pm: 1
+    description: "Complex report, charts, sub-reports"
+
+# -----------------------------------------------------------------------------
+# SECURITY & PERMISSIONS
+# -----------------------------------------------------------------------------
+security:
+  permissions_simple:
+    dev: 0.5
+    qa: 0.5
+    pm: 0.25
+    roles_max: 1
+    description: "1 role, CRUD permissions"
+
+  permissions_medium:
+    dev: 1
+    qa: 1
+    pm: 0.5
+    roles_max: 3
+    description: "2-3 roles, field-level permissions"
+
+  permissions_complex:
+    dev: 4
+    qa: 2.5
+    pm: 1
+    roles_max: 5
+    description: "4+ roles, row-level security"
+
+# -----------------------------------------------------------------------------
+# MISCELLANEOUS
+# -----------------------------------------------------------------------------
+misc:
+  menu:
+    dev: 0.25
+    qa: 0.25
+    pm: 0
+    description: "Simple menu entry"
+
+  menu_tree:
+    dev: 0.5
+    qa: 0.25
+    pm: 0.25
+    description: "Hierarchical menu structure"
+
+  translation:
+    dev: 0.5
+    qa: 0.25
+    pm: 0.25
+    description: "Per additional language (excluding EN/FR)"
+
+# -----------------------------------------------------------------------------
+# COMPLEXITY THRESHOLDS (total hours)
+# -----------------------------------------------------------------------------
+complexity_thresholds:
+  S: 4       # < 4h  (0.5 day)
+  M: 8       # 4-8h  (1 day)
+  L: 16      # 8-16h (1-2 days)
+  XL: 999    # > 16h -> SPLIT REQUIRED

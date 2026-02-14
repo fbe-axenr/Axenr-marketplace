@@ -18,12 +18,6 @@ axenr-marketplace/
 │   │   ├── commands/                 # Slash commands AxENR
 │   │   ├── docs/lessons/             # LESSONS-LEARNED.md (memoire)
 │   │   └── templates/                # Templates de sortie
-│   └── axelor-partner/               # Git submodule → agents partenaire Axelor
-│       └── plugins/axelor/           # 18 agents + 32 skills + 6 commands Axelor
-│           ├── agents/               # domain-agent, view-agent, java-agent, etc.
-│           ├── skills/               # axelor-xml-validator, code-reviewer, etc.
-│           ├── commands/             # develop, analyze-requirements, etc.
-│           └── docs/                 # Documentation Axelor 8.0 (2.7 MB)
 ├── docs/                             # Documentation marketplace
 ├── README.md                         # Installation et usage
 └── CONTRIBUTING.md                   # Guide ajout d'agents
@@ -53,7 +47,7 @@ axenr-marketplace/
 | /axenr:solve-batch | Resoudre 2 tickets en parallele |
 | /axenr:learn-review | Auditer et consolider les lecons (optionnel, l'auto-learning est integre) |
 
-### Agents Axelor Partenaire (plugins/axelor-partner/) - via git submodule
+### Agents Axelor Partenaire (plugins/axelor/) - v2.5.0
 
 | Agent | Role |
 |-------|------|
@@ -110,37 +104,17 @@ L'agent LIT le projet pour generer du code.
 L'agent ECRIT ses lecons dans le marketplace uniquement.
 L'agent ne depose AUCUN fichier dans le projet sauf le code demande.
 
-## GIT - SUBMODULE PARTENAIRE
+## AGENTS PARTENAIRE
 
-URL du partenaire : `git@git.axelor.com:ia-tools/axelor-claude-marketplace.git`
+Les agents Axelor (v2.5.0) sont inclus directement dans `plugins/axelor/`.
+Source : Axelor AI Team (`git@git.axelor.com:ia-tools/axelor-claude-marketplace.git`)
 
-```bash
-# Cloner le marketplace avec les agents partenaire
-git clone --recursive <url-axenr-marketplace>
+### Mise a jour du partenaire
 
-# Mettre a jour le submodule partenaire
-git submodule update --init --recursive
-
-# Recuperer les mises a jour du partenaire
-cd plugins/axelor-partner
-git pull origin main
-cd ../..
-git add plugins/axelor-partner
-git commit -m "chore(deps): update axelor partner agents"
-```
-
-## INSTALLATION DES AGENTS PARTENAIRE (alternative sans submodule)
-
-```bash
-# Dans Claude Code, ajouter le marketplace partenaire
-/plugin marketplace add git@git.axelor.com:ia-tools/axelor-claude-marketplace.git
-
-# Installer le plugin axelor
-/plugin install axelor
-
-# Verifier
-/plugin list
-```
+1. Telecharger la nouvelle version depuis le repo Axelor
+2. Remplacer le contenu de `plugins/axelor/`
+3. Mettre a jour la version dans `.claude-plugin/marketplace.json`
+4. Commit et push
 
 ## VERSIONING
 
@@ -157,5 +131,5 @@ Sans increment, les nouvelles commandes ne seront pas detectees par Claude Code.
 2. ENGLISH ONLY for technical names
 3. Documentation in French (user-facing) or English (code-facing)
 4. Conventional commits for this repo
-5. Ne jamais modifier les agents du partenaire (submodule) - les surcharger dans axenr/
+5. Ne jamais modifier les agents du partenaire (plugins/axelor/) - les surcharger dans axenr/
 6. Toujours incrementer la version apres ajout d'un composant

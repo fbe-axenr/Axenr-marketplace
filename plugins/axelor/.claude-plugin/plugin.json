@@ -1,0 +1,22 @@
+{
+  "name": "axelor",
+  "version": "2.5.0",
+  "description": "Complete Axelor development acceleration system with agents, skills, and comprehensive documentation for Axelor ERP 8.0 development",
+  "author": {
+    "name": "Axelor AI Team",
+    "email": "ai-team@axelor.com"
+  },
+  "homepage": "https://git.axelor.com/aop/addons/axelor-enterprise/ia/axelor-claude-marketplace",
+  "repository": "https://git.axelor.com/aop/addons/axelor-enterprise/ia/axelor-claude-marketplace",
+  "license": "Proprietary",
+  "keywords": [
+    "axelor",
+    "erp",
+    "code-generation",
+    "development",
+    "automation",
+    "workflow",
+    "java",
+    "xml"
+  ]
+}

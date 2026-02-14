@@ -1,0 +1,332 @@
+{
+  "description": "Merge Request title validation rules based on conventional commits",
+  "version": "1.0.0",
+  "pattern": "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\(.+\\))?: .+",
+  "rules": {
+    "format": {
+      "description": "MR title must follow conventional commits format",
+      "pattern": "<type>[optional scope]: <description>",
+      "required": true
+    },
+    "type": {
+      "description": "Type must be one of the allowed values",
+      "required": true,
+      "case": "lowercase",
+      "allowedValues": [
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "revert"
+      ]
+    },
+    "scope": {
+      "description": "Scope is optional but if present must be in parentheses and lowercase",
+      "required": false,
+      "case": "lowercase",
+      "format": "\\(.+\\)",
+      "examples": ["(auth)", "(api)", "(user)", "(order)"]
+    },
+    "separator": {
+      "description": "Colon followed by space is required after type/scope",
+      "required": true,
+      "value": ": "
+    },
+    "description": {
+      "description": "Description must be present and should start with lowercase",
+      "required": true,
+      "minLength": 1,
+      "startCase": "lowercase",
+      "noTrailingPeriod": true,
+      "imperative": true
+    }
+  },
+  "typeDescriptions": {
+    "feat": {
+      "description": "A new feature",
+      "examples": [
+        "feat: add user authentication",
+        "feat(auth): add JWT token support",
+        "feat(order): implement discount calculation"
+      ],
+      "keywords": ["add", "implement", "create", "introduce"]
+    },
+    "fix": {
+      "description": "A bug fix",
+      "examples": [
+        "fix: resolve login timeout",
+        "fix(api): handle null pointer",
+        "fix(order): correct total calculation"
+      ],
+      "keywords": ["fix", "resolve", "correct", "repair", "patch"]
+    },
+    "docs": {
+      "description": "Documentation only changes",
+      "examples": [
+        "docs: update README",
+        "docs(api): add endpoint documentation",
+        "docs: add installation guide"
+      ],
+      "keywords": ["document", "readme", "guide", "manual"]
+    },
+    "style": {
+      "description": "Code style/formatting (no functional change)",
+      "examples": [
+        "style: format code with prettier",
+        "style: fix indentation",
+        "style(api): organize imports"
+      ],
+      "keywords": ["format", "style", "indent", "organize"]
+    },
+    "refactor": {
+      "description": "Code refactoring (no functional change)",
+      "examples": [
+        "refactor(core): simplify validation logic",
+        "refactor(api): extract service layer",
+        "refactor: reorganize package structure"
+      ],
+      "keywords": ["refactor", "reorganize", "restructure", "extract", "simplify"]
+    },
+    "perf": {
+      "description": "Performance improvements",
+      "examples": [
+        "perf: optimize database queries",
+        "perf(search): add indexing",
+        "perf: reduce memory usage"
+      ],
+      "keywords": ["optimize", "performance", "speed", "cache", "index"]
+    },
+    "test": {
+      "description": "Adding or updating tests",
+      "examples": [
+        "test: add unit tests for user service",
+        "test(auth): add integration tests",
+        "test: update test fixtures"
+      ],
+      "keywords": ["test", "spec", "coverage"]
+    },
+    "build": {
+      "description": "Changes to build system or dependencies",
+      "examples": [
+        "build: update gradle dependencies",
+        "build: configure webpack",
+        "build(deps): bump axios to 1.6.0"
+      ],
+      "keywords": ["build", "dependency", "dependencies", "gradle", "maven", "npm"]
+    },
+    "ci": {
+      "description": "Changes to CI/CD configuration",
+      "examples": [
+        "ci: add sonarqube integration",
+        "ci: update gitlab pipeline",
+        "ci(jenkins): add deployment stage"
+      ],
+      "keywords": ["ci", "pipeline", "gitlab", "jenkins", "deploy"]
+    },
+    "chore": {
+      "description": "Other changes (maintenance, etc.)",
+      "examples": [
+        "chore: update gitignore",
+        "chore: clean up unused files",
+        "chore(deps): update dev dependencies"
+      ],
+      "keywords": ["chore", "maintenance", "cleanup"]
+    },
+    "revert": {
+      "description": "Revert a previous commit/MR",
+      "examples": [
+        "revert: revert feat: add experimental feature",
+        "revert(auth): revert authentication changes"
+      ],
+      "keywords": ["revert", "rollback", "undo"]
+    }
+  },
+  "commonErrors": [
+    {
+      "error": "Missing type prefix",
+      "example": "Add authentication feature",
+      "fix": "feat: add authentication feature",
+      "explanation": "MR title must start with a conventional commit type"
+    },
+    {
+      "error": "Capital letter in type",
+      "example": "Feat: add authentication",
+      "fix": "feat: add authentication",
+      "explanation": "Type must be lowercase"
+    },
+    {
+      "error": "Missing space after colon",
+      "example": "feat:add authentication",
+      "fix": "feat: add authentication",
+      "explanation": "Must have space after colon separator"
+    },
+    {
+      "error": "Capital letter in description",
+      "example": "feat: Add authentication",
+      "fix": "feat: add authentication",
+      "explanation": "Description should start with lowercase"
+    },
+    {
+      "error": "Trailing period",
+      "example": "feat: add authentication.",
+      "fix": "feat: add authentication",
+      "explanation": "No trailing period in MR title"
+    },
+    {
+      "error": "Scope not in parentheses",
+      "example": "feat auth: add authentication",
+      "fix": "feat(auth): add authentication",
+      "explanation": "Scope must be enclosed in parentheses"
+    },
+    {
+      "error": "Capital letter in scope",
+      "example": "feat(Auth): add authentication",
+      "fix": "feat(auth): add authentication",
+      "explanation": "Scope must be lowercase"
+    },
+    {
+      "error": "Invalid type",
+      "example": "feature: add authentication",
+      "fix": "feat: add authentication",
+      "explanation": "Use conventional commit type (feat, not feature)"
+    },
+    {
+      "error": "Too vague",
+      "example": "feat: updates",
+      "fix": "feat(auth): add user authentication",
+      "explanation": "Be specific about what was changed"
+    }
+  ],
+  "suggestionRules": {
+    "keywordMapping": {
+      "add": "feat",
+      "implement": "feat",
+      "create": "feat",
+      "introduce": "feat",
+      "fix": "fix",
+      "resolve": "fix",
+      "correct": "fix",
+      "repair": "fix",
+      "patch": "fix",
+      "update doc": "docs",
+      "readme": "docs",
+      "documentation": "docs",
+      "refactor": "refactor",
+      "reorganize": "refactor",
+      "extract": "refactor",
+      "simplify": "refactor",
+      "optimize": "perf",
+      "performance": "perf",
+      "speed": "perf",
+      "test": "test",
+      "spec": "test"
+    },
+    "commonScopes": [
+      "auth",
+      "user",
+      "api",
+      "ui",
+      "db",
+      "config",
+      "core",
+      "service",
+      "controller",
+      "domain",
+      "view",
+      "order",
+      "product",
+      "invoice",
+      "payment",
+      "sale",
+      "purchase",
+      "stock",
+      "crm",
+      "hr"
+    ],
+    "transformations": [
+      {
+        "from": "capital_first_letter",
+        "to": "lowercase",
+        "example": "Add feature → add feature"
+      },
+      {
+        "from": "trailing_period",
+        "to": "remove_period",
+        "example": "add feature. → add feature"
+      },
+      {
+        "from": "past_tense",
+        "to": "imperative",
+        "example": "added feature → add feature"
+      },
+      {
+        "from": "gerund",
+        "to": "imperative",
+        "example": "adding feature → add feature"
+      }
+    ]
+  },
+  "ciIntegration": {
+    "scriptPath": "ci/scripts/validate-mr-title.sh",
+    "validateOn": ["merge_request"],
+    "stage": "init",
+    "blocking": true,
+    "environmentVariable": "CI_MERGE_REQUEST_TITLE",
+    "exitCode": {
+      "success": 0,
+      "failure": 1
+    }
+  },
+  "squashCommitsIntegration": {
+    "enabled": true,
+    "description": "When squash commits is enabled, MR title becomes the final commit message",
+    "benefits": [
+      "Single, clean commit in main branch",
+      "MR title follows conventional commits",
+      "Enables automated changelog generation",
+      "Supports semantic versioning",
+      "Clear git history"
+    ],
+    "recommendation": "Always enable squash commits for feature branches"
+  },
+  "examples": {
+    "valid": [
+      "feat: add user authentication",
+      "feat(auth): add JWT token support",
+      "feat(auth): implement refresh token rotation",
+      "fix: resolve login timeout issue",
+      "fix(api): handle null pointer in user service",
+      "fix(order): correct total calculation for discounts",
+      "docs: update installation guide",
+      "docs(api): add endpoint documentation",
+      "style: format code with prettier",
+      "refactor(core): simplify validation logic",
+      "refactor(api): extract service layer",
+      "perf: optimize database queries",
+      "perf(search): add indexing for products",
+      "test: add unit tests for user service",
+      "test(auth): add integration tests",
+      "build: update gradle dependencies",
+      "ci: add sonarqube integration",
+      "chore: update gitignore",
+      "revert: revert feat: add experimental feature"
+    ],
+    "invalid": [
+      "Add authentication",
+      "Feature: authentication",
+      "feat:add authentication",
+      "feat: Add authentication",
+      "feat: add authentication.",
+      "feat(Auth): add authentication",
+      "authentication feature",
+      "WIP: working on feature",
+      "fix bug"
+    ]
+  }
+}

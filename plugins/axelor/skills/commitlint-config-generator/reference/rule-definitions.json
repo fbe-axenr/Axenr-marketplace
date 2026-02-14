@@ -1,0 +1,334 @@
+{
+  "rules": {
+    "body-case": {
+      "description": "Enforce case for body",
+      "type": "case",
+      "applicable": ["always", "never"],
+      "values": ["lower-case", "upper-case", "sentence-case", "start-case", "pascal-case"],
+      "default": [0],
+      "example": [2, "always", "lower-case"]
+    },
+    "body-empty": {
+      "description": "Enforce body presence or absence",
+      "type": "empty",
+      "applicable": ["always", "never"],
+      "default": [0],
+      "example": [2, "never"]
+    },
+    "body-full-stop": {
+      "description": "Enforce full stop at end of body",
+      "type": "full-stop",
+      "applicable": ["always", "never"],
+      "values": [".", "!", "?"],
+      "default": [0],
+      "example": [2, "never", "."]
+    },
+    "body-leading-blank": {
+      "description": "Enforce blank line before body",
+      "type": "leading-blank",
+      "applicable": ["always", "never"],
+      "default": [1, "always"],
+      "example": [1, "always"]
+    },
+    "body-max-length": {
+      "description": "Enforce maximum body length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 500]
+    },
+    "body-max-line-length": {
+      "description": "Enforce maximum line length in body",
+      "type": "max-line-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [2, "always", 100],
+      "example": [2, "always", 100]
+    },
+    "body-min-length": {
+      "description": "Enforce minimum body length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 20]
+    },
+    "footer-empty": {
+      "description": "Enforce footer presence or absence",
+      "type": "empty",
+      "applicable": ["always", "never"],
+      "default": [0],
+      "example": [2, "never"]
+    },
+    "footer-leading-blank": {
+      "description": "Enforce blank line before footer",
+      "type": "leading-blank",
+      "applicable": ["always", "never"],
+      "default": [1, "always"],
+      "example": [1, "always"]
+    },
+    "footer-max-length": {
+      "description": "Enforce maximum footer length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 500]
+    },
+    "footer-max-line-length": {
+      "description": "Enforce maximum line length in footer",
+      "type": "max-line-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [2, "always", 100],
+      "example": [2, "always", 100]
+    },
+    "footer-min-length": {
+      "description": "Enforce minimum footer length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 20]
+    },
+    "header-case": {
+      "description": "Enforce case for header",
+      "type": "case",
+      "applicable": ["always", "never"],
+      "values": ["lower-case", "upper-case", "sentence-case", "start-case", "pascal-case"],
+      "default": [0],
+      "example": [2, "always", "lower-case"]
+    },
+    "header-full-stop": {
+      "description": "Enforce full stop at end of header",
+      "type": "full-stop",
+      "applicable": ["always", "never"],
+      "values": [".", "!", "?"],
+      "default": [0],
+      "example": [2, "never", "."]
+    },
+    "header-max-length": {
+      "description": "Enforce maximum header length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [2, "always", 100],
+      "example": [2, "always", 100]
+    },
+    "header-min-length": {
+      "description": "Enforce minimum header length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 10]
+    },
+    "scope-case": {
+      "description": "Enforce case for scope",
+      "type": "case",
+      "applicable": ["always", "never"],
+      "values": ["lower-case", "upper-case", "sentence-case", "start-case", "pascal-case", "kebab-case", "camel-case", "snake-case"],
+      "default": [2, "always", "lower-case"],
+      "example": [2, "always", "lower-case"]
+    },
+    "scope-empty": {
+      "description": "Enforce scope presence or absence",
+      "type": "empty",
+      "applicable": ["always", "never"],
+      "default": [0],
+      "example": [2, "never"]
+    },
+    "scope-enum": {
+      "description": "Enforce scope to be from enum",
+      "type": "enum",
+      "applicable": ["always", "never"],
+      "values": "array",
+      "default": [0],
+      "example": [2, "always", ["auth", "sale", "purchase"]]
+    },
+    "scope-max-length": {
+      "description": "Enforce maximum scope length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 20]
+    },
+    "scope-min-length": {
+      "description": "Enforce minimum scope length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 3]
+    },
+    "subject-case": {
+      "description": "Enforce case for subject",
+      "type": "case",
+      "applicable": ["always", "never"],
+      "values": ["lower-case", "upper-case", "sentence-case", "start-case", "pascal-case", "kebab-case", "camel-case", "snake-case"],
+      "default": [2, "never", ["sentence-case", "start-case", "pascal-case", "upper-case"]],
+      "example": [2, "never", ["sentence-case", "start-case", "pascal-case", "upper-case"]]
+    },
+    "subject-empty": {
+      "description": "Enforce subject presence or absence",
+      "type": "empty",
+      "applicable": ["always", "never"],
+      "default": [2, "never"],
+      "example": [2, "never"]
+    },
+    "subject-exclamation-mark": {
+      "description": "Enforce exclamation mark presence or absence",
+      "type": "exclamation-mark",
+      "applicable": ["always", "never"],
+      "default": [0],
+      "example": [2, "never"]
+    },
+    "subject-full-stop": {
+      "description": "Enforce full stop at end of subject",
+      "type": "full-stop",
+      "applicable": ["always", "never"],
+      "values": [".", "!", "?"],
+      "default": [2, "never", "."],
+      "example": [2, "never", "."]
+    },
+    "subject-max-length": {
+      "description": "Enforce maximum subject length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 72]
+    },
+    "subject-min-length": {
+      "description": "Enforce minimum subject length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 10]
+    },
+    "type-case": {
+      "description": "Enforce case for type",
+      "type": "case",
+      "applicable": ["always", "never"],
+      "values": ["lower-case", "upper-case", "sentence-case", "start-case", "pascal-case", "kebab-case", "camel-case", "snake-case"],
+      "default": [2, "always", "lower-case"],
+      "example": [2, "always", "lower-case"]
+    },
+    "type-empty": {
+      "description": "Enforce type presence or absence",
+      "type": "empty",
+      "applicable": ["always", "never"],
+      "default": [2, "never"],
+      "example": [2, "never"]
+    },
+    "type-enum": {
+      "description": "Enforce type to be from enum",
+      "type": "enum",
+      "applicable": ["always", "never"],
+      "values": "array",
+      "default": [2, "always", ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]],
+      "example": [2, "always", ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"]]
+    },
+    "type-max-length": {
+      "description": "Enforce maximum type length",
+      "type": "max-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 10]
+    },
+    "type-min-length": {
+      "description": "Enforce minimum type length",
+      "type": "min-length",
+      "applicable": ["always"],
+      "values": "number",
+      "default": [0],
+      "example": [2, "always", 3]
+    }
+  },
+  "severityLevels": {
+    "0": "disabled",
+    "1": "warning",
+    "2": "error"
+  },
+  "applicableValues": {
+    "always": "Rule must be applied",
+    "never": "Rule must not be applied"
+  },
+  "caseTypes": {
+    "lower-case": "all lowercase (feat)",
+    "upper-case": "all uppercase (FEAT)",
+    "sentence-case": "First letter uppercase (Feat)",
+    "start-case": "Each word uppercase (Feat Module)",
+    "pascal-case": "PascalCase (FeatModule)",
+    "camel-case": "camelCase (featModule)",
+    "kebab-case": "kebab-case (feat-module)",
+    "snake-case": "snake_case (feat_module)"
+  },
+  "commonProfiles": {
+    "strict": {
+      "description": "Axelor standard profile with strict validation",
+      "characteristics": [
+        "Header max 100 chars (hard limit)",
+        "Body max 100 chars per line",
+        "Strict type enforcement",
+        "No emojis, no Co-Authored-By",
+        "Warnings for blank lines"
+      ],
+      "use_cases": [
+        "Production repositories",
+        "Team collaboration",
+        "Automated changelog generation"
+      ]
+    },
+    "standard": {
+      "description": "Balanced profile for conventional commits",
+      "characteristics": [
+        "Header max 100 chars",
+        "Body max 100 chars per line",
+        "Standard type validation",
+        "Optional scope"
+      ],
+      "use_cases": [
+        "Standard projects",
+        "Squash-only workflows",
+        "Simple validation needs"
+      ]
+    },
+    "relaxed": {
+      "description": "Lenient profile for learning/transition",
+      "characteristics": [
+        "Header max 120 chars",
+        "Body max 120 chars per line",
+        "Warnings instead of errors",
+        "Suitable for onboarding"
+      ],
+      "use_cases": [
+        "Learning environments",
+        "Transitioning teams",
+        "Personal projects"
+      ]
+    }
+  },
+  "typeDescriptions": {
+    "feat": "A new feature",
+    "fix": "A bug fix",
+    "docs": "Documentation only changes",
+    "style": "Code style changes (formatting, white-space, etc.)",
+    "refactor": "Code refactoring without changing functionality",
+    "perf": "Performance improvements",
+    "test": "Adding or updating tests",
+    "build": "Build system or external dependency changes",
+    "ci": "CI/CD configuration changes",
+    "chore": "Other changes that don't modify src or test files",
+    "revert": "Reverts a previous commit"
+  },
+  "exampleScopes": {
+    "modules": ["auth", "sale", "purchase", "inventory", "production", "stock", "crm", "hr"],
+    "features": ["api", "ui", "db", "cache", "security", "validation", "config"],
+    "packages": ["core", "web", "mobile", "cli", "sdk"]
+  }
+}

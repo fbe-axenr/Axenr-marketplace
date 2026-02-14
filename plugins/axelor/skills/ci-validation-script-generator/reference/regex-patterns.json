@@ -1,0 +1,16 @@
+{
+  "conventionalCommits": {
+    "standard": "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\(.+\\))?: .+",
+    "withScope": "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\\(.+\\): .+",
+    "description": "Standard conventional commits format"
+  },
+  "branchNaming": {
+    "gitflow": "^(feature|bugfix|hotfix|release)\\/[a-z0-9-]+$",
+    "simple": "^(feat|fix|docs|refactor|test|chore)\\/[a-z0-9-]+$",
+    "description": "Branch naming conventions"
+  },
+  "types": {
+    "standard": ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"],
+    "extended": ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert", "wip", "deps"]
+  }
+}

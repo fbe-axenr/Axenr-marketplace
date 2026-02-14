@@ -1,0 +1,263 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Complex Action Chains and Workflow Orchestration
+SOURCE: axelor-open-suite/axelor-sale/views/SaleOrder.xml + axelor-account/Invoice.xml
+BEST PRACTICE: Using action-group for sequential workflows with conditional logic
+CONTEXT: Business workflows requiring multiple coordinated actions (validation, updates, method calls)
+KEY PATTERNS:
+- action-group for sequential action execution
+- Conditional actions with if attribute
+- action-method for Java method invocation
+- action-record for field updates
+- action-attrs for dynamic attribute changes
+- action-validate for client-side validation
+- Action composition with save operations
+- Error handling and validation chains
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- PATTERN: Simple Sequential Action Group -->
+  <action-group name="action-group-sale-order-onnew">
+    <action name="action-sale-order-record-default-values"/>
+    <action name="action-sale-order-attrs-show-hide-fields"/>
+    <action name="action-sale-order-method-compute-defaults"/>
+  </action-group>
+
+  <!-- PATTERN: Conditional Action Execution in Group -->
+  <action-group name="action-group-sale-order-confirm">
+    <!-- Always execute validation first -->
+    <action name="action-sale-order-validate-confirm"/>
+    <!-- Conditional: only if status is draft -->
+    <action name="action-sale-order-method-confirm" if="statusSelect == 1"/>
+    <!-- Update fields after confirmation -->
+    <action name="action-sale-order-record-confirmed-status"/>
+    <!-- Conditional: generate stock moves if not a service order -->
+    <action name="action-sale-order-method-generate-stock-moves"
+            if="statusSelect == 3 &amp;&amp; orderTypeSelect != 2"/>
+    <!-- Refresh the view -->
+    <action name="save"/>
+  </action-group>
+
+  <!-- PATTERN: Complex Workflow with Multiple Conditions -->
+  <action-group name="action-group-invoice-validate">
+    <!-- Step 1: Pre-validation checks -->
+    <action name="action-invoice-validate-dates"/>
+    <action name="action-invoice-validate-lines"/>
+    <action name="action-invoice-validate-payment-mode" if="operationTypeSelect == 1"/>
+
+    <!-- Step 2: Conditional business logic -->
+    <action name="action-invoice-method-check-partner-account"
+            if="partner != null &amp;&amp; statusSelect == 1"/>
+    <action name="action-invoice-method-check-tax-configuration"
+            if="taxLineList != null &amp;&amp; !taxLineList.empty"/>
+
+    <!-- Step 3: Main validation method -->
+    <action name="action-invoice-method-validate"/>
+
+    <!-- Step 4: Post-validation updates (conditional on success) -->
+    <action name="action-invoice-record-update-status" if="statusSelect == 3"/>
+    <action name="action-invoice-method-generate-move" if="statusSelect == 3 &amp;&amp; move == null"/>
+    <action name="action-invoice-attrs-readonly-after-validate" if="statusSelect == 3"/>
+
+    <!-- Step 5: Notifications and refresh -->
+    <action name="action-invoice-method-send-notification" if="statusSelect == 3"/>
+    <action name="save"/>
+  </action-group>
+
+  <!-- PATTERN: action-validate for Client-Side Validation -->
+  <action-validate name="action-sale-order-validate-confirm">
+    <error message="Please select a customer" if="partner == null"/>
+    <error message="Order must have at least one line"
+           if="saleOrderLineList == null || saleOrderLineList.empty"/>
+    <error message="Total amount cannot be zero" if="exTaxTotal == 0"/>
+    <alert message="This order has no delivery address"
+           if="deliveryAddress == null"/>
+  </action-validate>
+
+  <!-- PATTERN: action-validate with Complex Conditions -->
+  <action-validate name="action-invoice-validate-dates">
+    <error message="Invoice date is required" if="invoiceDate == null"/>
+    <error message="Invoice date cannot be in the future"
+           if="invoiceDate &gt; __config__.date"/>
+    <error message="Due date must be after invoice date"
+           if="dueDate != null &amp;&amp; dueDate &lt; invoiceDate"/>
+    <alert message="Invoice date is more than 30 days old"
+           if="invoiceDate &lt; __config__.date.minusDays(30)"/>
+  </action-validate>
+
+  <!-- PATTERN: action-record for Field Updates -->
+  <action-record name="action-sale-order-record-default-values"
+    model="com.axelor.apps.sale.db.SaleOrder">
+    <field name="statusSelect" expr="eval: 1"/>
+    <field name="orderDate" expr="eval: __config__.date"/>
+    <field name="company" expr="eval: __user__.activeCompany"/>
+    <field name="currency" expr="eval: __user__.activeCompany?.currency"/>
+    <field name="priceList" expr="eval: partner?.salePriceList"/>
+    <field name="tradingName" expr="eval: __user__.tradingName"/>
+  </action-record>
+
+  <!-- PATTERN: action-record with Conditional Fields -->
+  <action-record name="action-sale-order-record-confirmed-status"
+    model="com.axelor.apps.sale.db.SaleOrder">
+    <field name="statusSelect" expr="eval: 3"/>
+    <field name="confirmDate" expr="eval: __config__.date"/>
+    <field name="confirmedByUser" expr="eval: __user__"/>
+    <field name="saleOrderSeq" expr="eval: _computeSeq"
+           if="saleOrderSeq == null || saleOrderSeq.empty"/>
+  </action-record>
+
+  <!-- PATTERN: action-attrs for Dynamic Attribute Changes -->
+  <action-attrs name="action-sale-order-attrs-show-hide-fields">
+    <attribute name="hidden" for="deliveryPanel"
+               expr="eval: orderTypeSelect == 2"/>
+    <attribute name="readonly" for="partner"
+               expr="eval: statusSelect &gt;= 3"/>
+    <attribute name="required" for="deliveryAddress"
+               expr="eval: orderTypeSelect == 1"/>
+    <attribute name="title" for="confirmBtn"
+               expr="eval: statusSelect == 1 ? 'Confirm Order' : 'Already Confirmed'"/>
+    <attribute name="domain" for="priceList"
+               expr="eval: &quot;self.typeSelect = 1 AND self.isActive = true&quot;
+                     + (partner?.salePriceList ? &quot; AND self.id = &quot; + partner.salePriceList.id : &quot;&quot;)"/>
+  </action-attrs>
+
+  <!-- PATTERN: action-attrs with Color/Style Changes -->
+  <action-attrs name="action-invoice-attrs-highlight-overdue">
+    <attribute name="css" for="dueDate"
+               expr="eval: dueDate &lt; __config__.date &amp;&amp; statusSelect == 3 ? 'label-danger' : ''"/>
+    <attribute name="css" for="amountRemaining"
+               expr="eval: amountRemaining &gt; 0 &amp;&amp; dueDate &lt; __config__.date ? 'label-bold label-danger' : ''"/>
+  </action-attrs>
+
+  <!-- PATTERN: action-method for Java Service Calls -->
+  <action-method name="action-sale-order-method-confirm">
+    <call class="com.axelor.apps.sale.service.SaleOrderService" method="confirmOrder"/>
+  </action-method>
+
+  <!-- PATTERN: action-method with Multiple Parameters -->
+  <action-method name="action-sale-order-method-compute-defaults">
+    <call class="com.axelor.apps.sale.service.SaleOrderService" method="computeDefaults"/>
+  </action-method>
+
+  <!-- PATTERN: Chained Actions in Button onClick -->
+  <form name="sale-order-form" title="Sale Order" model="com.axelor.apps.sale.db.SaleOrder">
+    <panel name="actionsPanel" sidebar="true">
+      <!-- Simple action chain: save then execute -->
+      <button name="confirmBtn" title="Confirm"
+              onClick="save,action-group-sale-order-confirm"/>
+
+      <!-- Multi-step chain with validation -->
+      <button name="validateBtn" title="Validate"
+              onClick="action-sale-order-validate-confirm,save,action-group-sale-order-confirm"/>
+
+      <!-- Conditional chain with prompt -->
+      <button name="cancelBtn" title="Cancel"
+              onClick="action-sale-order-validate-can-cancel,save,action-sale-order-method-cancel,action-sale-order-record-canceled"/>
+    </panel>
+  </form>
+
+  <!-- PATTERN: onChange Action Chains -->
+  <form name="sale-order-line-form" title="Sale Order Line"
+        model="com.axelor.apps.sale.db.SaleOrderLine">
+    <panel name="mainPanel">
+      <!-- Multi-step onChange chain -->
+      <field name="product"
+             onChange="action-sale-order-line-record-product-info,
+                       action-sale-order-line-method-compute-price,
+                       action-sale-order-line-attrs-update-fields"/>
+
+      <!-- Conditional onChange chain -->
+      <field name="qty"
+             onChange="action-sale-order-line-method-compute-total,
+                       action-sale-order-line-validate-qty,
+                       action-sale-order-line-attrs-check-stock"/>
+    </panel>
+  </form>
+
+  <!-- PATTERN: onLoad Action Group for Form Initialization -->
+  <form name="invoice-form" title="Invoice" model="com.axelor.apps.account.db.Invoice"
+        onLoad="action-group-invoice-onload"
+        onNew="action-group-invoice-onnew"
+        onSave="action-invoice-method-compute-before-save">
+
+    <panel name="mainPanel">
+      <field name="partner"/>
+    </panel>
+  </form>
+
+  <action-group name="action-group-invoice-onload">
+    <action name="action-invoice-attrs-readonly-after-validate"/>
+    <action name="action-invoice-attrs-highlight-overdue"/>
+    <action name="action-invoice-method-load-tax-configuration"/>
+  </action-group>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **action-group**: Sequential execution of multiple actions
+   - Actions execute in order (top to bottom)
+   - Use 'if' attribute for conditional execution
+   - Can include save operation as an action
+
+2. **Action Types in Chains**:
+   - action-validate: Client-side validation (error/alert/info)
+   - action-record: Field value updates with expressions
+   - action-attrs: Dynamic attribute changes (hidden, readonly, required, domain, css, title)
+   - action-method: Java service method invocation
+   - action-group: Nested action groups
+   - save: Built-in save operation
+
+3. **Conditional Execution**:
+   - if="condition": Action only executes if condition is true
+   - Supports boolean operators: &&, ||, !, ==, !=, <, >, <=, >=
+   - Can reference field values directly
+
+4. **action-validate Messages**:
+   - error: Blocks execution, shows error message
+   - alert: Shows warning, allows continuation
+   - info: Shows information message
+
+5. **action-record Expressions**:
+   - expr="eval: ..." for Groovy expressions
+   - Access __config__ for system context (date, app, etc.)
+   - Access __user__ for current user info
+   - Access field values directly (partner, statusSelect, etc.)
+
+6. **action-attrs Attributes**:
+   - hidden: Show/hide elements
+   - readonly: Enable/disable editing
+   - required: Mark as required/optional
+   - domain: Dynamic domain filtering
+   - css: Apply CSS classes
+   - title: Dynamic title text
+   - value: Set field value
+
+7. **Button onClick Chains**:
+   - Comma-separated action list: "action1,action2,action3"
+   - Common pattern: "save,action-group-name"
+   - Validation before save: "action-validate,save,action-method"
+
+8. **onChange Chains**:
+   - Triggered on field value change
+   - Common pattern: update related fields, compute values, validate
+   - Can include multiple actions separated by commas
+
+9. **Form Lifecycle Actions**:
+   - onLoad: Executed when form loads (view/edit)
+   - onNew: Executed when creating new record
+   - onSave: Executed before saving record
+
+10. **Best Practices**:
+    - Validate first, then execute business logic
+    - Use action-groups for reusable workflows
+    - Include save operation after state-changing actions
+    - Use conditional execution to avoid unnecessary processing
+    - Chain actions logically: validate → compute → update → save → refresh
+-->

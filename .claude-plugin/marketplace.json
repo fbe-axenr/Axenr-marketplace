@@ -10,6 +10,13 @@
       "description": "Self-learning ticket resolution system with autonomous agents, skills, and commands for AxENR projects (Axelor ERP + React Native mobile)",
       "version": "1.0.0",
       "author": "Fadel Benomar - Developer Backend & IA @ AxENR"
+    },
+    {
+      "name": "axelor",
+      "source": "./plugins/axelor",
+      "description": "Complete Axelor development acceleration system with agents, skills, and comprehensive documentation for Axelor ERP 8.0 development",
+      "version": "2.5.0",
+      "author": "Axelor AI Team"
     }
   ]
 }

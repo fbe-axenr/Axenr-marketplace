@@ -1,0 +1,348 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Advanced Panel Types - Dashlet, Include, Mail, Stack
+SOURCE: axelor-open-suite/axelor-crm/Lead.xml + axelor-base/ABCAnalysis.xml
+BEST PRACTICE: Using specialized panel types for embedded content and reusable components
+CONTEXT: Complex forms requiring embedded dashboards, reusable sections, and messaging
+KEY PATTERNS:
+- panel-dashlet for embedding dashboard content in forms
+- panel-include for reusable component composition
+- panel-mail for messaging and collaboration features
+- panel-stack for conditional panel groups
+- Action references in panel-dashlet
+- Height and colSpan attributes for layout
+- Integration with mail-messages and mail-followers
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: panel-dashlet for Embedded Dashboards -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="lead-form" title="Lead" model="com.axelor.apps.crm.db.Lead">
+
+    <panel-tabs name="mainPanelTab">
+      <!-- PATTERN: panel-dashlet in Tab with Action Reference -->
+      <panel name="eventPanel" title="Events">
+        <button name="meetingBtn" title="Create a meeting" icon="fa-pencil-square-o"
+                onClick="save,action-lead-view-meeting-event" colSpan="3"/>
+        <button name="callBtn" title="Create a call" icon="fa-phone"
+                onClick="save,action-lead-view-call-event" colSpan="3"/>
+
+        <!-- PATTERN: Embed grid view as dashlet with fixed height -->
+        <panel-dashlet name="eventPanelDashlet" action="action-lead-view-events"
+                       title="Events" height="550" colSpan="12"/>
+      </panel>
+
+      <!-- PATTERN: Multiple Dashlets in Same Tab -->
+      <panel name="emailPanel" title="Emails">
+        <button name="emailBtn" title="Create an email" icon="fa-envelope-o"
+                onClick="save,action-send-by-email-with-template" colSpan="3"/>
+
+        <!-- PATTERN: Stacked dashlets for related data -->
+        <panel-dashlet name="leadSentEmailsPanel" title="Sent emails"
+                       action="action-lead-view-sent-emails" colSpan="12" height="550"/>
+
+        <panel-dashlet name="leadReceivedEmailsPanel" title="Received emails"
+                       action="action-lead-view-received-emails" colSpan="12" height="550"/>
+      </panel>
+
+      <!-- PATTERN: Dashlet with Chart View -->
+      <panel name="analyticsPanel" title="Analytics">
+        <panel-dashlet name="leadActivityChart" title="Activity Over Time"
+                       action="action-lead-view-activity-chart" colSpan="12" height="400"/>
+
+        <panel-dashlet name="leadConversionMetrics" title="Conversion Metrics"
+                       action="action-lead-view-conversion-metrics" colSpan="6" height="300"/>
+
+        <panel-dashlet name="leadSourceDistribution" title="Lead Sources"
+                       action="action-lead-view-source-distribution" colSpan="6" height="300"/>
+      </panel>
+    </panel-tabs>
+
+    <!-- PATTERN: Sidebar Dashlet for Activity Feed -->
+    <panel sidebar="true" name="activityPanel" title="Activity" colSpan="12" showIf="id">
+      <panel-dashlet action="action-lead-view-lead-activity-custom" height="550"/>
+    </panel>
+
+  </form>
+
+  <!-- Supporting action-view for dashlets -->
+  <action-view name="action-lead-view-events" title="Events"
+               model="com.axelor.apps.crm.db.Event">
+    <view type="grid" name="event-lead-grid"/>
+    <view type="form" name="event-form"/>
+    <domain>self.lead.id = :id</domain>
+  </action-view>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: panel-include for Reusable Components -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="sale-order-form" title="Sale Order"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <panel name="mainPanel">
+      <!-- PATTERN: Include reusable partner info panel -->
+      <panel-include view="partner-contact-info-panel-include"/>
+
+      <!-- PATTERN: Include with condition -->
+      <panel-include view="sale-order-delivery-panel-include"
+                     showIf="orderTypeSelect == 1"/>
+
+      <!-- PATTERN: Include reusable pricing panel -->
+      <panel-include view="sale-order-pricing-panel-include"/>
+    </panel>
+
+    <panel-tabs name="detailsTabs">
+      <!-- PATTERN: Include complex reusable component -->
+      <panel name="financialPanel" title="Financial">
+        <panel-include view="financial-details-panel-include"/>
+      </panel>
+    </panel-tabs>
+
+  </form>
+
+  <!-- PATTERN: Reusable Panel Definition (referenced by panel-include) -->
+  <form name="partner-contact-info-panel-include" title="Contact Information">
+    <panel name="contactInfoPanel" title="Contact Information" colSpan="12">
+      <field name="partner.fullName" readonly="true" colSpan="6"/>
+      <field name="partner.emailAddress" readonly="true" colSpan="6"/>
+      <field name="partner.mobilePhone" widget="phone" readonly="true" colSpan="6"/>
+      <field name="partner.fixedPhone" widget="phone" readonly="true" colSpan="6"/>
+    </panel>
+  </form>
+
+  <!-- PATTERN: Complex Reusable Panel with Nested Structure -->
+  <form name="sale-order-delivery-panel-include" title="Delivery">
+    <panel name="deliveryPanel" colSpan="12">
+      <field name="deliveryAddress" colSpan="8" form-view="address-form"/>
+      <field name="deliveryDate" colSpan="4"/>
+      <field name="shipmentMode" colSpan="6"/>
+      <field name="freightCarrierMode" colSpan="6"/>
+      <separator title="Delivery Instructions" colSpan="12"/>
+      <field name="deliveryComments" colSpan="12" widget="html"/>
+    </panel>
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: panel-mail for Messaging Features -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="opportunity-form" title="Opportunity"
+        model="com.axelor.apps.crm.db.Opportunity">
+
+    <panel name="mainPanel">
+      <field name="name"/>
+      <field name="amount"/>
+    </panel>
+
+    <!-- PATTERN: Basic panel-mail with messages and followers -->
+    <panel-mail name="mailPanel">
+      <mail-messages limit="4"/>
+      <mail-followers/>
+    </panel-mail>
+
+  </form>
+
+  <!-- PATTERN: panel-mail with Custom Configuration -->
+  <form name="project-form" title="Project"
+        model="com.axelor.apps.project.db.Project">
+
+    <panel name="mainPanel">
+      <field name="name"/>
+    </panel>
+
+    <panel-mail name="mailPanel">
+      <!-- PATTERN: Limit number of visible messages -->
+      <mail-messages limit="10"/>
+      <!-- PATTERN: Mail followers for collaboration -->
+      <mail-followers/>
+    </panel-mail>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: panel-stack for Conditional Panel Groups -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="abc-analysis-form" title="ABC Analysis"
+        model="com.axelor.apps.base.db.ABCAnalysis">
+
+    <panel name="mainPanel">
+      <field name="typeSelect" colSpan="12"
+             onChange="action-abc-analysis-record-reset-fields,
+                       action-abc-analysis-attrs-update-panels"/>
+
+      <!-- PATTERN: panel-stack for mutually exclusive panels -->
+      <panel-stack name="typeSpecificPanels">
+        <!-- Panel 1: Product Analysis -->
+        <panel name="productPanel" title="Product Analysis" showIf="typeSelect == 1">
+          <field name="productCategory" colSpan="6"/>
+          <field name="productFamily" colSpan="6"/>
+          <field name="analysisPeriod" colSpan="12"/>
+        </panel>
+
+        <!-- Panel 2: Customer Analysis -->
+        <panel name="customerPanel" title="Customer Analysis" showIf="typeSelect == 2">
+          <field name="customerCategory" colSpan="6"/>
+          <field name="salesTeam" colSpan="6"/>
+          <field name="analysisPeriod" colSpan="12"/>
+        </panel>
+
+        <!-- Panel 3: Supplier Analysis -->
+        <panel name="supplierPanel" title="Supplier Analysis" showIf="typeSelect == 3">
+          <field name="supplierCategory" colSpan="6"/>
+          <field name="purchasingTeam" colSpan="6"/>
+          <field name="analysisPeriod" colSpan="12"/>
+        </panel>
+      </panel-stack>
+
+      <!-- PATTERN: Results panel shown after computation -->
+      <panel name="resultsPanel" title="Results" showIf="status == 2" colSpan="12">
+        <panel-dashlet action="action-abc-analysis-view-results"
+                       title="ABC Classification" height="600" colSpan="12"/>
+      </panel>
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Combining Multiple Advanced Panel Types -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="project-task-form" title="Project Task"
+        model="com.axelor.apps.project.db.ProjectTask">
+
+    <panel name="mainPanel">
+      <field name="name" colSpan="8"/>
+      <field name="status" colSpan="4" widget="NavSelect"/>
+
+      <!-- PATTERN: Reusable component inclusion -->
+      <panel-include view="project-task-assignee-panel-include"/>
+    </panel>
+
+    <panel-tabs name="mainPanelTab">
+      <!-- Tab 1: Details with embedded dashlet -->
+      <panel name="detailsPanel" title="Details">
+        <field name="description" colSpan="12" widget="html"/>
+
+        <!-- PATTERN: Embedded time tracking dashlet -->
+        <panel-dashlet name="timeTrackingDashlet" title="Time Tracking"
+                       action="action-project-task-view-time-entries"
+                       colSpan="12" height="400"/>
+      </panel>
+
+      <!-- Tab 2: Subtasks with dashlet -->
+      <panel name="subtasksPanel" title="Subtasks">
+        <button name="addSubtaskBtn" title="Add Subtask" icon="fa-plus"
+                onClick="save,action-project-task-view-add-subtask" colSpan="2"/>
+
+        <panel-dashlet name="subtasksDashlet" title="Subtasks"
+                       action="action-project-task-view-subtasks"
+                       colSpan="12" height="500"/>
+      </panel>
+
+      <!-- Tab 3: Files with custom dashlet -->
+      <panel name="filesPanel" title="Files">
+        <panel-dashlet name="filesDashlet"
+                       action="action-project-task-view-files"
+                       colSpan="12" height="450"/>
+      </panel>
+    </panel-tabs>
+
+    <!-- PATTERN: Sidebar with activity dashlet -->
+    <panel sidebar="true" name="activityPanel" title="Activity">
+      <panel-dashlet action="action-project-task-view-activity" height="600"/>
+    </panel>
+
+    <!-- PATTERN: Mail panel for collaboration -->
+    <panel-mail name="mailPanel">
+      <mail-messages limit="5"/>
+      <mail-followers/>
+    </panel-mail>
+
+  </form>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **panel-dashlet**: Embed dashboard content within forms
+   - Attributes: name, action (required), title, height, colSpan
+   - action references an action-view definition
+   - height in pixels (e.g., "400", "550", "600")
+   - Can embed grids, charts, calendar or custom views
+   - Multiple dashlets can be stacked vertically
+   - Common in tabs and sidebar panels
+
+2. **panel-include**: Reusable component composition
+   - References another form view by name
+   - Promotes DRY principle (Don't Repeat Yourself)
+   - Useful for common sections (contact info, addresses, pricing)
+   - Supports conditional inclusion with showIf/hideIf
+   - Included view must be a <form> element
+   - Fields in included panel reference parent model
+
+3. **panel-mail**: Messaging and collaboration
+   - Contains mail-messages and mail-followers elements
+   - mail-messages: Display message thread
+     - limit attribute: Number of messages to show initially
+   - mail-followers: User subscription management
+   - Enables @mentions, notifications, email integration
+   - Automatically integrates with Axelor messaging system
+
+4. **panel-stack**: Conditional panel groups
+   - Shows only one child panel at a time based on conditions
+   - Each child panel has showIf/hideIf condition
+   - Useful for mutually exclusive sections
+   - Cleaner than multiple independent panels with conditions
+   - Reduces DOM complexity (hidden panels not rendered)
+
+5. **Layout Best Practices**:
+   - Use panel-dashlet height consistently (multiples of 50 or 100)
+   - Full-width dashlets: colSpan="12"
+   - Side-by-side dashlets: colSpan="6" each
+   - Sidebar dashlets: typically no colSpan (auto-sized)
+   - Stack related dashlets vertically in same tab
+
+6. **Action Integration**:
+   - panel-dashlet action must return a view (grid/chart/form)
+   - Use domain in action-view to filter data contextually
+   - Pass context variables for parent record reference
+   - Example: domain="self.lead.id = :id"
+
+7. **Performance Considerations**:
+   - Limit number of dashlets per form (3-5 max recommended)
+   - Use limit attribute in mail-messages
+   - Consider lazy loading for expensive dashlets
+   - Use showIf to defer rendering until needed
+
+8. **Common Use Cases**:
+   - panel-dashlet: Activity feeds, related records, analytics
+   - panel-include: Contact sections, address blocks, pricing tables
+   - panel-mail: Any collaborative entity (projects, sales, support)
+   - panel-stack: Type-specific configuration panels
+
+9. **Combining Patterns**:
+   - panel-include + panel-dashlet: Reusable sections with embedded data
+   - panel-tabs + panel-dashlet: Organize multiple dashlets in tabs
+   - sidebar + panel-dashlet: Activity/history in sidebar
+   - panel-stack + conditional logic: Complex dynamic forms
+
+10. **Maintenance Benefits**:
+    - panel-include: Update once, changes reflect everywhere
+    - panel-dashlet: Decouple data presentation from form structure
+    - panel-mail: Standard messaging across all entities
+    - panel-stack: Clean conditional UI without code duplication
+-->

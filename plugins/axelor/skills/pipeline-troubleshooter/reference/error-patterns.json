@@ -1,0 +1,55 @@
+{
+  "commitlint": {
+    "type_invalid": {
+      "pattern": "type must be one of",
+      "cause": "Invalid commit type (not in allowed enum)",
+      "fix": "Use valid type: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+    },
+    "type_case": {
+      "pattern": "type must be lower-case",
+      "cause": "Type is not lowercase",
+      "fix": "Change 'Feature' to 'feat', 'Fix' to 'fix', etc."
+    },
+    "header_too_long": {
+      "pattern": "header must not be longer than",
+      "cause": "Commit header exceeds maximum length (100 chars)",
+      "fix": "Shorten commit message, move details to body"
+    },
+    "subject_empty": {
+      "pattern": "subject may not be empty",
+      "cause": "Missing commit description after type/scope",
+      "fix": "Add description: 'feat(auth): add JWT authentication'"
+    }
+  },
+  "build": {
+    "compilation_error": {
+      "pattern": "Compilation failed|error: cannot find symbol",
+      "cause": "Java compilation error",
+      "fix": "Check error details, fix syntax/import errors, rebuild"
+    },
+    "dependency_not_found": {
+      "pattern": "Could not resolve|Could not find",
+      "cause": "Dependency resolution failure",
+      "fix": "Check dependency coordinates, update repositories, clear cache"
+    }
+  },
+  "test": {
+    "test_failure": {
+      "pattern": "Tests failed|FAILURE|expected .* but was",
+      "cause": "Unit test assertion failure",
+      "fix": "Review test failure details, fix code or update test expectations"
+    },
+    "coverage_threshold": {
+      "pattern": "coverage is below|Code coverage .* is below",
+      "cause": "Test coverage below required threshold",
+      "fix": "Add more tests to increase coverage or adjust threshold"
+    }
+  },
+  "spotless": {
+    "formatting_error": {
+      "pattern": "Execution failed for task.*spotlessCheck|The following files had format violations",
+      "cause": "Code formatting doesn't match spotless rules",
+      "fix": "Run './gradlew spotlessApply' locally and commit changes"
+    }
+  }
+}

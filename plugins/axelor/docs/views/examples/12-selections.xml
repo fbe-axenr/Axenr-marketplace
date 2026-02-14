@@ -1,0 +1,495 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Selection Definitions with Colors, Icons, and References
+SOURCE: axelor-open-suite/axelor-production/Selects.xml + axelor-crm/Selects.xml + axelor-sale/Selects.xml
+BEST PRACTICE: Creating reusable selection lists with visual indicators
+CONTEXT: Selection elements define option lists for select fields with colors, icons, and metadata
+KEY PATTERNS:
+- Basic selection with options
+- Selection with color attributes
+- Selection with icon references
+- Selection with data-grid and data-form (polymorphic)
+- Numeric vs string option values
+- Selection extension/override
+- i18n translation considerations
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Basic Selection with String Values -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="partner.type.select">
+    <option value="company">Company</option>
+    <option value="individual">Individual</option>
+  </selection>
+
+  <!--
+  USAGE: <field name="typeSelect" selection="partner.type.select"/>
+  EXPLANATION:
+  - Simple text-based options
+  - value: Stored in database (use lowercase, no spaces)
+  - Display text: Between tags (translatable via i18n)
+  - No colors or icons
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Selection with Numeric Values -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="base.product.category.type.select">
+    <option value="1">Product</option>
+    <option value="2">Service</option>
+    <option value="3">Pack</option>
+  </selection>
+
+  <!--
+  USAGE: <field name="categoryTypeSelect" selection="base.product.category.type.select"/>
+  EXPLANATION:
+  - Numeric values for database storage
+  - More compact than strings
+  - Use when order matters or values need arithmetic comparison
+  - Standard pattern: 1, 2, 3... (avoid 0 for clarity)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Selection with Color Attributes -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="production.manuf.order.status.select">
+    <option value="1" color="blue">Draft</option>
+    <option value="2" color="red">Canceled</option>
+    <option value="3" color="purple">Planned</option>
+    <option value="4" color="orange">In progress</option>
+    <option value="5" color="grey">Standby</option>
+    <option value="6" color="green">Finished</option>
+    <option value="7" color="teal">Merged</option>
+  </selection>
+
+  <!--
+  USAGE:
+  <field name="statusSelect" selection="production.manuf.order.status.select"
+         widget="single-select"/>
+  EXPLANATION:
+  - color attribute for visual status indication
+  - Available colors: blue, red, green, orange, purple, grey, teal, cyan, yellow, pink
+  - Colors shown as badges/pills in UI
+  - Useful for status fields, priorities, categories
+  - Widget "single-select" recommended for colored selections
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Priority Selection with Color Coding -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="production.order.priority.select">
+    <option value="1" color="cyan">Low</option>
+    <option value="2" color="blue">Normal</option>
+    <option value="3" color="orange">High</option>
+    <option value="4" color="red">Urgent</option>
+  </selection>
+
+  <!--
+  PATTERN: Color gradient for priority levels
+  - Low priority: Cool colors (cyan, blue)
+  - High priority: Warm colors (orange, red)
+  - Creates visual hierarchy
+  - Consistent with traffic light metaphor
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Invoice Status with Descriptive Names -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="account.invoice.status.select">
+    <option value="1" color="blue">Draft</option>
+    <option value="2" color="orange">Validated</option>
+    <option value="3" color="green">Ventilated</option>
+    <option value="4" color="teal">Paid</option>
+    <option value="5" color="red">Canceled</option>
+  </selection>
+
+  <!--
+  PATTERN: Business process status colors
+  - Draft: blue (editable)
+  - Validated: orange (pending)
+  - Ventilated: green (posted)
+  - Paid: teal (completed)
+  - Canceled: red (terminated)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 6: Selection with Icon References -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="production.cost.sheet.line.type.select">
+    <option value="1" icon="img/32px/produceProduct.png">Produced product</option>
+    <option value="2" icon="img/32px/consumeProduct.png">Consumed product</option>
+    <option value="3" icon="img/32px/workCenter.png">Work center</option>
+    <option value="4" icon="img/32px/indirectCost.png">Indirect cost</option>
+    <option value="5" icon="img/32px/consumeProductWaste.png">Consumed product waste</option>
+    <option value="6" icon="img/32px/worker.png">Human</option>
+  </selection>
+
+  <!--
+  USAGE: <field name="typeSelect" selection="production.cost.sheet.line.type.select"/>
+  EXPLANATION:
+  - icon attribute: Path to image file (relative to web root)
+  - Standard size: 32px x 32px PNG with transparency
+  - Icons shown in dropdown and selected value
+  - Useful for visual categorization
+  - Icons stored in: src/main/resources/img/ or webapp/img/
+  - Path starts with "img/" (not "/img/")
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 7: Font Awesome Icons (Alternative) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="crm.event.type.select">
+    <option value="1" icon="fa-calendar">Meeting</option>
+    <option value="2" icon="fa-phone">Call</option>
+    <option value="3" icon="fa-envelope">Email</option>
+    <option value="4" icon="fa-tasks">Task</option>
+  </selection>
+
+  <!--
+  EXPLANATION:
+  - icon with Font Awesome class (fa-*)
+  - No image file needed
+  - Scales automatically
+  - Monochrome (inherits text color)
+  - Preferred over images when available
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 8: Selection with data-grid and data-form -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="message.related.to.select" id="crm.message.related.to.select">
+    <option value="com.axelor.apps.crm.db.Lead"
+            data-grid="lead-grid"
+            data-form="lead-form">Lead</option>
+    <option value="com.axelor.apps.crm.db.Opportunity"
+            data-grid="opportunity-grid"
+            data-form="opportunity-form">Opportunity</option>
+    <option value="com.axelor.apps.crm.db.Event"
+            data-grid="event-grid"
+            data-form="event-form">Event</option>
+  </selection>
+
+  <!--
+  USAGE:
+  <field name="relatedToSelect" selection="message.related.to.select"/>
+  <field name="relatedTo" domain="self.class = :relatedToSelect"/>
+  EXPLANATION:
+  - Polymorphic field support (multiple model types)
+  - value: Fully qualified class name
+  - data-grid: Grid view name for this type
+  - data-form: Form view name for this type
+  - id attribute: Makes selection extendable by other modules
+  - Used with MetaJsonRecord or polymorphic references
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 9: Sale Order Status with Workflow States -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="sale.order.status.select">
+    <option value="1" color="blue">Draft quotation</option>
+    <option value="2" color="orange">Finalized quotation</option>
+    <option value="3" color="green">Order confirmed</option>
+    <option value="4" color="teal">Order completed</option>
+    <option value="5" color="red">Canceled</option>
+  </selection>
+
+  <!--
+  PATTERN: Workflow progression with descriptive labels
+  - Use gerund/participle for states (Draft, Finalized, Confirmed)
+  - Past tense for completed states (Completed, Canceled)
+  - Color progression: blue → orange → green → teal
+  - Canceled always red (error/termination)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 10: Lead Status with Stage-based Naming -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="crm.lead.status.select">
+    <option value="1" color="blue">New</option>
+    <option value="2" color="cyan">Assigned</option>
+    <option value="3" color="purple">In process</option>
+    <option value="4" color="orange">Converted</option>
+    <option value="5" color="red">Lost</option>
+    <option value="6" color="grey">Recycled</option>
+  </selection>
+
+  <!--
+  PATTERN: Funnel/pipeline stages
+  - New/Initial: blue
+  - Active/Processing: cyan/purple
+  - Success: orange (converted)
+  - Failure: red (lost)
+  - Special: grey (recycled/archived)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 11: Boolean-like Selection (Yes/No/Unknown) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="base.partner.quality.rating.select">
+    <option value="1" color="green">Good</option>
+    <option value="2" color="orange">Average</option>
+    <option value="3" color="red">Poor</option>
+    <option value="0" color="grey">Not rated</option>
+  </selection>
+
+  <!--
+  PATTERN: Rating/quality scale
+  - Use 0 for null/unknown state
+  - Positive values for actual ratings
+  - Color scale: green (good) → orange (medium) → red (bad)
+  - Grey for unset/unknown
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 12: Extended Selection (Module Override) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!--
+  Base module defines:
+  <selection name="base.partner.type.select">
+    <option value="1">Customer</option>
+    <option value="2">Supplier</option>
+  </selection>
+  -->
+
+  <!-- Extended module adds more options: -->
+  <selection name="base.partner.type.select">
+    <option value="1">Customer</option>
+    <option value="2">Supplier</option>
+    <option value="3">Prospect</option>
+    <option value="4">Competitor</option>
+  </selection>
+
+  <!--
+  EXPLANATION:
+  - Modules can extend/override selections
+  - Use same name attribute
+  - Include all original options + new ones
+  - Maintain original values to avoid data conflicts
+  - Add new values with higher numbers
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 13: Multi-Module Selection with ID -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="message.related.to.select" id="base.message.related.to.select">
+    <option value="com.axelor.apps.base.db.Partner"
+            data-grid="partner-grid"
+            data-form="partner-form">Partner</option>
+  </selection>
+
+  <!-- Another module extends with id reference: -->
+  <selection name="message.related.to.select" id="crm.message.related.to.select">
+    <option value="com.axelor.apps.base.db.Partner"
+            data-grid="partner-grid"
+            data-form="partner-form">Partner</option>
+    <option value="com.axelor.apps.crm.db.Lead"
+            data-grid="lead-grid"
+            data-form="lead-form">Lead</option>
+    <option value="com.axelor.apps.crm.db.Opportunity"
+            data-grid="opportunity-grid"
+            data-form="opportunity-form">Opportunity</option>
+  </selection>
+
+  <!--
+  EXPLANATION:
+  - id attribute makes selection extendable
+  - Each module defines its own id (base.*, crm.*, sale.*)
+  - Modules include base options + their additions
+  - Framework merges all versions
+  - Used for polymorphic selections across modules
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 14: Time Period Selection -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="base.period.select">
+    <option value="1">Today</option>
+    <option value="2">This week</option>
+    <option value="3">This month</option>
+    <option value="4">This quarter</option>
+    <option value="5">This year</option>
+    <option value="6">Custom period</option>
+  </selection>
+
+  <!--
+  PATTERN: Predefined time ranges
+  - No colors needed (not status-based)
+  - Chronological ordering (shortest to longest)
+  - Last option for custom/manual entry
+  - Numeric values for potential comparison logic
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 15: Action Type Selection -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <selection name="production.operation.type.select">
+    <option value="1" color="blue" icon="fa-wrench">Setup</option>
+    <option value="2" color="green" icon="fa-cogs">Production</option>
+    <option value="3" color="orange" icon="fa-check-circle">Quality control</option>
+    <option value="4" color="purple" icon="fa-truck">Transport</option>
+  </selection>
+
+  <!--
+  PATTERN: Combining colors and icons
+  - Both color and icon attributes
+  - Icon for semantic meaning
+  - Color for visual categorization
+  - Creates rich, informative UI
+  -->
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **Selection Definition**:
+   - <selection name="module.entity.field.select"> naming convention
+   - Contains multiple <option> elements
+   - Referenced by field: selection="selection-name"
+   - Defined once, used many times
+
+2. **Option Values**:
+   - **String values**: Use lowercase, underscores, no spaces
+   - **Numeric values**: Use integers (1, 2, 3...) for ordered sets
+   - **Class names**: Fully qualified for polymorphic selections
+   - Value stored in database, display text shown to user
+
+3. **Color Attribute**:
+   - Available colors: blue, red, green, orange, purple, grey, teal, cyan, yellow, pink
+   - Shows as colored badge/pill in UI
+   - Use for status fields, priorities, categories
+   - Color conventions:
+     - blue: Draft/Initial
+     - orange: Pending/Warning
+     - green: Success/Completed
+     - red: Error/Canceled
+     - grey: Inactive/Unknown
+     - purple/teal: Special states
+
+4. **Icon Attribute**:
+   - **Image path**: "img/32px/filename.png" (32x32 PNG recommended)
+   - **Font Awesome**: "fa-icon-name" (e.g., "fa-calendar", "fa-phone")
+   - Icons shown in dropdown and selected value
+   - Prefer Font Awesome when available (scalable, no file management)
+   - Custom images for specific business icons
+
+5. **data-grid and data-form**:
+   - Used for polymorphic selections (multiple model types)
+   - value: Fully qualified class name (com.axelor.apps.module.db.Entity)
+   - data-grid: Grid view name for this type
+   - data-form: Form view name for this type
+   - Enables dynamic view resolution based on selected type
+
+6. **Selection Extension**:
+   - Modules can override/extend selections by using same name
+   - Must include all original options + new ones
+   - Use id attribute to make selection officially extendable
+   - Each module can have its own id (base.*, crm.*, sale.*)
+   - Framework merges all versions at runtime
+
+7. **Naming Conventions**:
+   - Format: "module.entity.field.select" or "module.entity.select"
+   - Examples:
+     - production.manuf.order.status.select
+     - crm.lead.status.select
+     - base.partner.type.select
+   - Lowercase, dot-separated
+   - Always ends with ".select"
+
+8. **Widget Usage**:
+   - Default widget: dropdown (select)
+   - Recommended for colored selections: widget="single-select"
+   - single-select shows colors as badges
+   - For radio buttons: widget="radio-select"
+   - For multi-select: widget="multi-select" (not for selection, but for reference)
+
+9. **Translation**:
+   - Display text (between <option> tags) is translatable
+   - Create i18n entries: "option.module.entity.field.select.value"
+   - Example: "option.production.manuf.order.status.select.1" = "Draft"
+   - Values (value attribute) are NOT translated (database keys)
+
+10. **Status Workflow Patterns**:
+    - Use numeric progression: 1 (initial) → 2, 3, 4 (progression) → 5 (terminal)
+    - Color progression: blue → orange/purple → green → teal
+    - Canceled/Error always last value with red color
+    - Draft/New always value 1 with blue color
+
+11. **Priority Patterns**:
+    - Low to High: 1, 2, 3, 4
+    - Colors: cyan (low) → blue (normal) → orange (high) → red (urgent)
+    - Use for sorting: ORDER BY prioritySelect DESC
+
+12. **Boolean Alternatives**:
+    - Instead of boolean, use selection for: Yes/No/Unknown, Good/Average/Poor
+    - Include "0" or last value for "Unknown/Not set"
+    - Provides more flexibility than true/false
+    - Better for reporting and filtering
+
+13. **Best Practices**:
+    - Keep selections short (max 10-12 options)
+    - For longer lists, use many-to-one reference instead
+    - Use consistent color schemes across application
+    - Group related selections (all status selections use similar colors)
+    - Document selection meaning in comments
+    - Reserve red for errors/cancelations
+    - Reserve green for success/completion
+    - Use grey for neutral/inactive states
+
+14. **Performance**:
+    - Selections loaded once at app startup
+    - Cached in memory
+    - Very fast lookup
+    - Prefer selection over many-to-one for small, fixed lists
+    - Use many-to-one for: user-editable lists, large lists (>15 items)
+
+15. **Common Selection Types**:
+    - **Status**: Workflow states (draft, validated, completed, canceled)
+    - **Priority**: Urgency levels (low, normal, high, urgent)
+    - **Type**: Entity categories (customer, supplier, prospect)
+    - **Period**: Time ranges (day, week, month, quarter, year)
+    - **Rating**: Quality scales (good, average, poor)
+    - **Boolean-like**: Yes/No/Unknown, Active/Inactive/Suspended
+    - **Polymorphic**: Class names for dynamic typing
+
+16. **Integration with Domain**:
+    - Use in domain filters: "self.statusSelect = 3"
+    - Comparison operators: =, !=, <, >, <=, >=, IN
+    - Example: "self.prioritySelect >= 3" (high and urgent)
+    - Example: "self.statusSelect IN (1, 2)" (draft or validated)
+-->

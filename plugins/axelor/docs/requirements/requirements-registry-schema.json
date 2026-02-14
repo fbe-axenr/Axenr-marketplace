@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Requirements Registry",
+  "description": "Schema for requirements-registry.json produced by analyze-redmine-tickets command",
+  "type": "object",
+  "required": ["registry_version", "generated_at", "source", "statistics", "requirements", "groupings"],
+  "properties": {
+    "registry_version": {
+      "type": "string",
+      "example": "2.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "example": "2025-11-22T10:00:00Z"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "scrap_directory": { "type": "string" },
+        "tickets_analyzed": { "type": "integer" },
+        "requirements_created": { "type": "integer" }
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "properties": {
+        "by_type": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" },
+          "example": { "bug": 32, "enhancement": 8 }
+        },
+        "by_module": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" },
+          "example": { "axelor-account": 25, "axelor-sale": 10 }
+        },
+        "by_priority": {
+          "type": "object",
+          "properties": {
+            "critical": { "type": "integer" },
+            "high": { "type": "integer" },
+            "medium": { "type": "integer" },
+            "low": { "type": "integer" }
+          }
+        },
+        "ready_for_develop": { "type": "integer" },
+        "needs_clarification": { "type": "integer" }
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/requirement"
+      }
+    },
+    "groupings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "requirement_id": { "type": "string" },
+          "tickets": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "requirement": {
+      "type": "object",
+      "required": ["requirement_id", "title", "type", "description", "scope", "ready_for_develop"],
+      "properties": {
+        "requirement_id": {
+          "type": "string",
+          "pattern": "^REQ-\\d{3}$",
+          "example": "REQ-001"
+        },
+        "title": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["bug", "enhancement", "new_feature", "configuration", "performance", "ux", "data", "integration"]
+        },
+        "description": {
+          "type": "object",
+          "properties": {
+            "summary": { "type": "string" },
+            "problem": { "type": "string" },
+            "expected_behavior": { "type": "string" }
+          }
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "modules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "confidence": { "type": "integer", "minimum": 0, "maximum": 100 }
+                }
+              }
+            },
+            "entities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "role": { "type": "string", "enum": ["primary", "secondary", "related"] },
+                  "fields": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "workflows": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "business_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string", "enum": ["validation", "calculation", "workflow", "display", "constraint"] },
+              "description": { "type": "string" },
+              "conditions": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "source_tickets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          }
+        },
+        "priority": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "level": { "type": "string", "enum": ["critical", "high", "medium", "low"] }
+          }
+        },
+        "ready_for_develop": { "type": "boolean" }
+      }
+    }
+  }
+}

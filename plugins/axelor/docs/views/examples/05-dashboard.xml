@@ -1,0 +1,172 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Dashboard with Multiple Dashlets and Layout Composition
+SOURCE: axelor-open-suite/axelor-crm/views/Dashboard.xml:1-90
+BEST PRACTICE: Composing multiple dashlets with varied colSpan for responsive dashboards
+CONTEXT: CRM/Sales dashboards with metrics, charts, and data grids
+KEY PATTERNS:
+- Dashboard with title attribute
+- Multiple dashlet elements with action references
+- colSpan variations for layout (12, 6, 4, 3)
+- canSearch attribute for dashlet interactivity
+- height attribute for dashlet sizing
+- Mix of chart, grid, and custom dashlets
+- Action references to action-view definitions
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- PATTERN: Dashboard with Mixed Dashlet Types -->
+  <dashboard name="crm-dashboard" title="CRM Dashboard">
+
+    <!-- PATTERN: Full-width KPI dashlet (12 columns) -->
+    <dashlet name="kpiDashlet" title="Key Performance Indicators"
+      action="action-crm-view-kpi-dashlet" colSpan="12" height="200"/>
+
+    <!-- PATTERN: Half-width chart dashlets (6 columns each) -->
+    <dashlet name="leadsByStatusChart" title="Leads by Status"
+      action="action-crm-view-leads-by-status-chart" colSpan="6" height="350"/>
+
+    <dashlet name="opportunitiesPipelineChart" title="Opportunities Pipeline"
+      action="action-crm-view-opportunities-pipeline-chart" colSpan="6" height="350"/>
+
+    <!-- PATTERN: Third-width metric dashlets (4 columns each) -->
+    <dashlet name="monthlyRevenueMetric" title="Monthly Revenue"
+      action="action-crm-view-monthly-revenue" colSpan="4" height="150"/>
+
+    <dashlet name="conversionRateMetric" title="Conversion Rate"
+      action="action-crm-view-conversion-rate" colSpan="4" height="150"/>
+
+    <dashlet name="activeLeadsMetric" title="Active Leads"
+      action="action-crm-view-active-leads-count" colSpan="4" height="150"/>
+
+    <!-- PATTERN: Grid dashlet with canSearch (full-width) -->
+    <dashlet name="recentOpportunitiesGrid" title="Recent Opportunities"
+      action="action-crm-view-recent-opportunities" colSpan="12"
+      canSearch="true" height="400"/>
+
+    <!-- PATTERN: Quarter-width small dashlets (3 columns each) -->
+    <dashlet name="todayCallsDashlet" title="Today's Calls"
+      action="action-crm-view-today-calls" colSpan="3" height="200"/>
+
+    <dashlet name="todayMeetingsDashlet" title="Today's Meetings"
+      action="action-crm-view-today-meetings" colSpan="3" height="200"/>
+
+    <dashlet name="overdueTasksDashlet" title="Overdue Tasks"
+      action="action-crm-view-overdue-tasks" colSpan="3" height="200"/>
+
+    <dashlet name="upcomingEventsDashlet" title="Upcoming Events"
+      action="action-crm-view-upcoming-events" colSpan="3" height="200"/>
+
+  </dashboard>
+
+  <!-- PATTERN: Sales Dashboard with Different Layout -->
+  <dashboard name="sales-dashboard" title="Sales Dashboard">
+
+    <!-- PATTERN: Two-column layout (6+6) -->
+    <dashlet name="salesTargetChart" title="Sales vs Target"
+      action="action-sales-view-target-chart" colSpan="6" height="300"/>
+
+    <dashlet name="topProductsChart" title="Top Products"
+      action="action-sales-view-top-products-chart" colSpan="6" height="300"/>
+
+    <!-- PATTERN: Three-column layout (4+4+4) -->
+    <dashlet name="totalSalesMetric" title="Total Sales (MTD)"
+      action="action-sales-view-total-sales" colSpan="4" height="150"/>
+
+    <dashlet name="averageOrderMetric" title="Average Order Value"
+      action="action-sales-view-avg-order-value" colSpan="4" height="150"/>
+
+    <dashlet name="pendingOrdersMetric" title="Pending Orders"
+      action="action-sales-view-pending-orders-count" colSpan="4" height="150"/>
+
+    <!-- PATTERN: Asymmetric layout (8+4) -->
+    <dashlet name="salesByRegionMap" title="Sales by Region"
+      action="action-sales-view-region-map" colSpan="8" height="450"/>
+
+    <dashlet name="topSalespersonsRank" title="Top Salespersons"
+      action="action-sales-view-top-salespersons" colSpan="4" height="450"/>
+
+    <!-- PATTERN: Grid dashlet without canSearch (read-only) -->
+    <dashlet name="latestOrdersGrid" title="Latest Orders"
+      action="action-sales-view-latest-orders" colSpan="12" height="350"/>
+
+  </dashboard>
+
+  <!--
+  Supporting action-view definitions referenced by dashlets
+  (These would typically be in separate action XML files)
+  -->
+
+  <!-- PATTERN: Chart Dashlet Action -->
+  <action-view name="action-crm-view-leads-by-status-chart"
+    title="Leads by Status" model="com.axelor.apps.crm.db.Lead">
+    <view type="chart" name="lead-status-distribution-chart"/>
+  </action-view>
+
+  <!-- PATTERN: Grid Dashlet Action with Domain -->
+  <action-view name="action-crm-view-recent-opportunities"
+    title="Recent Opportunities" model="com.axelor.apps.crm.db.Opportunity">
+    <view type="grid" name="opportunity-grid"/>
+    <view type="form" name="opportunity-form"/>
+    <domain>self.createdOn &gt;= :_todayMinusDays(30)</domain>
+    <context name="_todayMinusDays" expr="eval: __config__.date.minusDays(30)"/>
+  </action-view>
+
+  <!-- PATTERN: Custom Dashlet Action with Context -->
+  <action-view name="action-crm-view-today-calls"
+    title="Today's Calls" model="com.axelor.apps.crm.db.Event">
+    <view type="grid" name="event-call-grid"/>
+    <view type="form" name="event-form"/>
+    <domain>self.typeSelect = 2 AND self.startDateTime &gt;= :_todayStart
+            AND self.startDateTime &lt; :_tomorrowStart</domain>
+    <context name="_todayStart" expr="eval: __config__.date.atStartOfDay()"/>
+    <context name="_tomorrowStart" expr="eval: __config__.date.plusDays(1).atStartOfDay()"/>
+  </action-view>
+
+  <!-- PATTERN: Metric Dashlet Action (single aggregate value) -->
+  <action-view name="action-crm-view-active-leads-count"
+    title="Active Leads" model="com.axelor.apps.crm.db.Lead">
+    <view type="chart" name="lead-count-metric-chart"/>
+    <domain>self.isConverted = false</domain>
+  </action-view>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+1. **Dashboard Composition**: Container for multiple dashlets with title attribute
+2. **colSpan Layout Patterns**:
+   - Full-width: colSpan="12" for primary content
+   - Half-width: colSpan="6" for side-by-side comparison
+   - Third-width: colSpan="4" for metric triads
+   - Quarter-width: colSpan="3" for compact widgets
+   - Asymmetric: colSpan="8" + colSpan="4" for main+sidebar
+3. **Dashlet Attributes**:
+   - name: Unique identifier
+   - title: Display title
+   - action: Reference to action-view definition
+   - colSpan: Layout width (1-12)
+   - height: Pixel height (e.g., "200", "350", "450")
+   - canSearch: Enable search bar (true/false, default false)
+4. **Dashlet Action Types**:
+   - Chart dashlets: action-view with chart view type
+   - Grid dashlets: action-view with grid view type
+   - Custom dashlets: action-view with domain and context
+   - Metric dashlets: Single-value charts or custom views
+5. **Responsive Layout**: Dashlets flow in 12-column grid, wrap to new rows
+6. **Action-View Integration**: Each dashlet references an action-view that defines:
+   - Model to query
+   - View type (chart, grid, form)
+   - Domain filters
+   - Context variables
+7. **Mixed Content**: Combine charts, grids, metrics, and custom components
+8. **Height Control**: Use height attribute for vertical sizing consistency
+9. **Interactivity**: canSearch="true" adds search capability to grid dashlets
+10. **Context Passing**: Use <context> in action-view for dynamic date ranges, filters
+-->

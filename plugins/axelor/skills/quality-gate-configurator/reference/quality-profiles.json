@@ -1,0 +1,55 @@
+{
+  "profiles": {
+    "strict": {
+      "description": "Production-grade quality gates with maximum validation",
+      "blocking_jobs": ["commitlint", "validate-mr-title", "test", "spotless"],
+      "optional_jobs": [],
+      "coverage_threshold": 80,
+      "approvals_required": 1,
+      "merge_settings": {
+        "pipelines_must_succeed": true,
+        "squash_commits_required": true,
+        "all_discussions_resolved": true
+      },
+      "protected_branch": {
+        "allowed_to_merge": "Maintainers",
+        "allowed_to_push": "Maintainers",
+        "require_approval": true
+      }
+    },
+    "standard": {
+      "description": "Balanced quality gates for standard projects",
+      "blocking_jobs": ["commitlint", "validate-mr-title", "test"],
+      "optional_jobs": ["spotless", "sonarqube"],
+      "coverage_threshold": 70,
+      "approvals_required": 1,
+      "merge_settings": {
+        "pipelines_must_succeed": true,
+        "squash_commits_required": true,
+        "all_discussions_resolved": false
+      },
+      "protected_branch": {
+        "allowed_to_merge": "Maintainers",
+        "allowed_to_push": "Maintainers",
+        "require_approval": true
+      }
+    },
+    "relaxed": {
+      "description": "Lenient quality gates for rapid development",
+      "blocking_jobs": ["commitlint"],
+      "optional_jobs": ["test", "spotless", "sonarqube"],
+      "coverage_threshold": 0,
+      "approvals_required": 0,
+      "merge_settings": {
+        "pipelines_must_succeed": true,
+        "squash_commits_required": false,
+        "all_discussions_resolved": false
+      },
+      "protected_branch": {
+        "allowed_to_merge": "Maintainers",
+        "allowed_to_push": "Maintainers",
+        "require_approval": false
+      }
+    }
+  }
+}

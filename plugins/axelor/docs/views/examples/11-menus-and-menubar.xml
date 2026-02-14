@@ -1,0 +1,516 @@
+<!--
+═══════════════════════════════════════════════════════════════
+PATTERN: Menu Hierarchy and Menubar Patterns
+SOURCE: axelor-open-suite/axelor-crm/views/Menu.xml + Opportunity.xml + axelor-production/ManufOrder.xml
+BEST PRACTICE: Organizing application navigation with menus and form/grid menubars
+CONTEXT: Two distinct patterns - menuitem hierarchy (app navigation) vs menubar (form/grid actions)
+KEY PATTERNS:
+- Root menu with icon and icon-background
+- Menuitem hierarchy (parent-child relationships)
+- Menu ordering and grouping
+- Conditional menu visibility (if, if-module)
+- Action-view references from menu
+- Menubar in forms/grids
+- Menu with nested items
+- showTitle attribute for menu labels
+- Menu item with prompt dialogs
+═══════════════════════════════════════════════════════════════
+-->
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<object-views xmlns="http://axelor.com/xml/ns/object-views"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://axelor.com/xml/ns/object-views
+  https://axelor.com/xml/ns/object-views/object-views_7.4.xsd">
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION A: MENUITEM HIERARCHY (Application Navigation) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!--
+  CONTEXT: This is the main navigation menu structure visible in the left sidebar
+  of the Axelor application. Root menus appear as top-level items, with children
+  nested underneath.
+  -->
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 1: Root Menu with Icon and Background -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: Root level menuitem with icon-background for visual identity -->
+  <menuitem name="crm-root" title="CRM" order="-2100"
+            if="__config__.app.isApp('crm')"
+            icon="person-bounding-box"
+            icon-background="#2fa042"/>
+
+  <!--
+  EXPLANATION:
+  - name: Unique identifier for menu
+  - title: Display text
+  - order: Negative for top positioning (lower number = higher position)
+  - if: Conditional visibility based on app configuration
+  - icon: Bootstrap icon name (without "bi-" prefix)
+  - icon-background: Hex color for icon background circle
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 2: Menu Groups (Parent Menus without Action) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: Group menu - parent for related menu items -->
+  <menuitem name="crm-root-lead" parent="crm-root" title="Leads" order="100"/>
+
+  <menuitem name="crm-root-prospects" parent="crm-root" title="Prospects" order="200"/>
+
+  <menuitem name="crm-root-opportunities" parent="crm-root" title="Opportunities" order="300"/>
+
+  <menuitem name="crm-root-customers" parent="crm-root" title="Customers" order="400"/>
+
+  <!--
+  EXPLANATION:
+  - parent: References parent menuitem name
+  - No action attribute = this is a group/folder
+  - order: Controls sequence within parent (100, 200, 300...)
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 3: Action Menu Items (Leaf Nodes) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: Leaf menu item with action reference -->
+  <menuitem name="crm-my-lead" parent="crm-root-lead"
+            title="My leads" action="crm.my.lead" order="100"/>
+
+  <menuitem name="crm-all-leads" parent="crm-root-lead"
+            title="All leads" action="crm.all.leads" order="200"/>
+
+  <menuitem name="crm-my-prospects" parent="crm-root-prospects"
+            title="My prospects" action="crm.my.prospects" order="100"/>
+
+  <menuitem name="crm-all-prospects" parent="crm-root-prospects"
+            title="All prospects" action="crm.all.prospects" order="200"/>
+
+  <!--
+  EXPLANATION:
+  - action: References an action-view name
+  - These are the clickable items that open views
+  - Lower order within same parent = appears first
+  -->
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 4: Action-View Definitions for Menus -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: action-view with kanban, grid, and form views -->
+  <action-view name="crm.my.lead" title="My leads"
+               model="com.axelor.apps.crm.db.Lead">
+    <view type="kanban" name="lead-kanban"/>
+    <view type="grid" name="lead-grid"/>
+    <view type="form" name="lead-form"/>
+    <view-param name="search-filters" value="lead-filters"/>
+    <domain>self.user.id = :_internalUserId</domain>
+    <context name="_myActiveTeam"
+             expr="call:com.axelor.apps.base.service.user.UserService:getUserActiveTeam()"/>
+    <context name="todayDate" expr="eval:__config__.date"/>
+    <context name="_internalUserId" expr="eval:__user__.id"/>
+  </action-view>
+
+  <!-- PATTERN: action-view with domain filtering -->
+  <action-view name="crm.all.leads" title="All leads"
+               model="com.axelor.apps.crm.db.Lead">
+    <view type="kanban" name="lead-kanban"/>
+    <view type="grid" name="lead-grid"/>
+    <view type="form" name="lead-form"/>
+    <view-param name="search-filters" value="lead-filters"/>
+    <context name="todayDate" expr="eval:__config__.date"/>
+  </action-view>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 5: Conditional Menu Visibility -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: Menu shown only if multiple companies enabled -->
+  <menuitem name="base-company-menu" parent="base-root-config"
+            title="Companies" action="base.company"
+            if="__config__.app.getApp('base')?.getEnableMultiCompany()"/>
+
+  <!-- PATTERN: Menu shown only if specific module installed -->
+  <menuitem name="production-reports-menu" parent="production-root"
+            title="Reports" order="900"
+            if-module="axelor-production"/>
+
+  <!-- PATTERN: Menu shown based on multiple conditions -->
+  <menuitem name="sale-order-menu" parent="sale-root"
+            title="Sale Orders" action="sale.orders"
+            if="__config__.app.isApp('sale') &amp;&amp; __user__.hasRole('sales.manager')"/>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 6: Multi-Level Menu Hierarchy (3+ Levels) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- Level 1: Root -->
+  <menuitem name="production-root" title="Production" order="-1800"
+            if="__config__.app.isApp('production')"
+            icon="gear-wide-connected" icon-background="#e67e22"/>
+
+  <!-- Level 2: Group -->
+  <menuitem name="production-root-manufacturing" parent="production-root"
+            title="Manufacturing" order="100"/>
+
+  <!-- Level 3: Sub-group -->
+  <menuitem name="production-manufacturing-orders" parent="production-root-manufacturing"
+            title="Orders" order="100"/>
+
+  <!-- Level 4: Leaf actions -->
+  <menuitem name="production-manuf-orders-my" parent="production-manufacturing-orders"
+            title="My orders" action="production.my.manuf.orders" order="100"/>
+
+  <menuitem name="production-manuf-orders-all" parent="production-manufacturing-orders"
+            title="All orders" action="production.all.manuf.orders" order="200"/>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 7: Menu with Icon (Non-Root) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- PATTERN: Non-root menu with icon (no background) -->
+  <menuitem name="base-root-config" parent="base-root"
+            title="Configuration" icon="gear" order="900"/>
+
+  <menuitem name="production-settings" parent="production-root"
+            title="Settings" icon="gear-fill" order="999"/>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION B: MENUBAR IN FORMS AND GRIDS (Action Menus) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!--
+  CONTEXT: Menubar appears at the top of forms/grids as a dropdown menu bar
+  for secondary actions and tools. Different from menuitem navigation.
+  -->
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 8: Form with Menubar (Simple) -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="opportunity-form" title="Opportunity"
+        model="com.axelor.apps.crm.db.Opportunity"
+        onNew="action-opportunity-group-new"
+        onLoad="action-opportunity-attrs-set-attrs-on-load">
+
+    <!-- PATTERN: Menubar with single menu -->
+    <menubar>
+      <menu name="opportunityToolsMenu" title="Tools" showTitle="true" icon="fa-wrench">
+        <!-- PATTERN: Menu item with conditional visibility -->
+        <item name="convertIntoQuotationItem"
+              if="__config__.app.isApp('sale')" if-module="axelor-sale"
+              title="Create a quotation"
+              action="save,action-sale-group-generate-sale-order"/>
+
+        <!-- PATTERN: Simple menu item -->
+        <item title="Schedule Event"
+              action="save,action-opportunity-view-schedule-event"/>
+
+        <!-- PATTERN: Menu item with help text -->
+        <item name="convertToCustomerItem" title="Convert to Customer"
+              action="save,action-opportunity-method-convert-to-customer"
+              help="Convert this opportunity's partner to a customer"/>
+      </menu>
+    </menubar>
+
+    <panel name="mainPanel">
+      <field name="name"/>
+      <!-- ... other fields ... -->
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 9: Form with Multiple Menus in Menubar -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="manuf-order-form" title="Manufacturing order"
+        model="com.axelor.apps.production.db.ManufOrder"
+        onNew="action-manuf-order-onnew"
+        onLoad="action-manuf-order-onload"
+        onSave="action-manuf-order-onsave">
+
+    <!-- PATTERN: Menubar with multiple menu groups -->
+    <menubar>
+      <!-- Menu 1: Reports -->
+      <menu name="manufOrderReportsMenu" title="Reports"
+            icon="fa-files-o" showTitle="true">
+        <item name="printProductionProcessItem" title="Print Production Process"
+              action="save,action-production-process-method-print"/>
+
+        <item name="printWorkCenterLoadItem" title="Print Work Center Load"
+              action="save,action-work-center-load-method-print"/>
+
+        <item name="printBarcodeLabelsItem" title="Print Barcode Labels"
+              action="save,action-manuf-order-method-print-barcode-labels"/>
+      </menu>
+
+      <!-- Menu 2: Tools -->
+      <menu name="manufOrderToolsMenu" title="Tools"
+            icon="fa-wrench" showTitle="true">
+        <item name="generateWasteItem" title="Generate Waste Declaration"
+              action="save,action-manuf-order-method-generate-waste"
+              showIf="statusSelect == 6"/>
+
+        <item name="mergeOrdersItem" title="Merge with Other Orders"
+              action="action-manuf-order-view-merge-wizard"/>
+      </menu>
+
+      <!-- Menu 3: More Actions -->
+      <menu name="manufOrderMoreMenu" title="More"
+            icon="fa-ellipsis-v" showTitle="false">
+        <item name="duplicateItem" title="Duplicate Order"
+              action="save,action-manuf-order-method-duplicate"/>
+
+        <item name="archiveItem" title="Archive"
+              action="action-manuf-order-method-archive"
+              showIf="statusSelect >= 6"/>
+      </menu>
+    </menubar>
+
+    <panel name="mainPanel">
+      <field name="manufOrderSeq"/>
+      <!-- ... other fields ... -->
+    </panel>
+
+  </form>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 10: Grid with Menubar and Prompt Dialogs -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <grid name="invoice-grid" title="Invoices"
+        model="com.axelor.apps.account.db.Invoice"
+        orderBy="-invoiceDate">
+
+    <toolbar>
+      <button name="printBtn" title="Print invoices"
+              onClick="action-invoice-method-show-invoice" icon="fa-print"/>
+    </toolbar>
+
+    <!-- PATTERN: Menubar in grid with confirmation prompts -->
+    <menubar>
+      <menu name="invoiceToolsMenu" title="Tools" icon="fa-wrench" showTitle="true">
+        <!-- PATTERN: Menu item with confirmation prompt -->
+        <item name="validateSelectedInvoicesItem"
+              title="Validate selected invoices"
+              action="action-invoice-method-mass-validation"
+              prompt="Are you sure you want to validate all selected invoices ?"/>
+
+        <!-- PATTERN: Menu item with conditional prompt -->
+        <item name="ventilateSelectedInvoicesItem"
+              title="Ventilate selected invoices"
+              action="action-invoice-method-mass-ventilation"
+              prompt="Are you sure you want to ventilate all selected invoices ?"
+              if="!__config__.app.getApp('invoice')?.isVentilationSkipped"/>
+
+        <!-- PATTERN: Menu item without prompt -->
+        <item name="mergeCustInvoicesItem"
+              title="Merge Cust. Invoices"
+              action="action-invoice-method-convert-selected-lines-to-merge-lines"/>
+
+        <!-- PATTERN: Menu item opening another view -->
+        <item name="seeCustInvoicesLinesItem"
+              title="See cust. invoices lines"
+              action="action-customer-invoice-line-menu"/>
+      </menu>
+
+      <!-- PATTERN: Second menu for exports/reports -->
+      <menu name="invoiceExportsMenu" title="Export" icon="fa-download" showTitle="true">
+        <item name="exportExcelItem" title="Export to Excel"
+              action="action-invoice-method-export-excel"/>
+
+        <item name="exportPdfItem" title="Export to PDF"
+              action="action-invoice-method-export-pdf"/>
+      </menu>
+    </menubar>
+
+    <field name="invoiceId"/>
+    <field name="partner"/>
+    <field name="statusSelect"/>
+    <!-- ... other fields ... -->
+
+  </grid>
+
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PATTERN 11: Menubar with Nested Menu Conditionals -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <form name="sale-order-form" title="Sale Order"
+        model="com.axelor.apps.sale.db.SaleOrder">
+
+    <menubar>
+      <menu name="saleOrderActionsMenu" title="Actions" icon="fa-bolt" showTitle="true">
+        <!-- PATTERN: Conditional item based on status -->
+        <item name="generateInvoiceItem" title="Generate Invoice"
+              action="save,action-sale-order-method-generate-invoice"
+              showIf="statusSelect == 3 &amp;&amp; !fullyInvoiced"/>
+
+        <!-- PATTERN: Conditional item based on module -->
+        <item name="generateStockMoveItem" title="Generate Stock Move"
+              action="save,action-sale-order-method-generate-stock-move"
+              if-module="axelor-stock"
+              showIf="statusSelect == 3 &amp;&amp; !fullyDelivered"/>
+
+        <!-- PATTERN: Item with both if and showIf -->
+        <item name="generatePurchaseOrderItem" title="Generate Purchase Order"
+              if="__config__.app.isApp('purchase')" if-module="axelor-purchase"
+              showIf="statusSelect == 3"
+              action="save,action-sale-order-view-generate-purchase-order"/>
+      </menu>
+    </menubar>
+
+    <panel name="mainPanel">
+      <field name="saleOrderSeq"/>
+      <!-- ... other fields ... -->
+    </panel>
+
+  </form>
+
+</object-views>
+
+<!--
+KEY TAKEAWAYS:
+
+## SECTION A: MENUITEM HIERARCHY (Navigation Menus)
+
+1. **Menu Levels**:
+   - **Root menus**: Top-level, no parent, use icon-background for branding
+   - **Group menus**: Parent but no action, organize related items
+   - **Leaf menus**: Have action attribute, open views when clicked
+   - Can nest 3-4 levels deep (Root > Group > Subgroup > Action)
+
+2. **Menuitem Attributes**:
+   - **name**: Unique identifier (use module prefix: "crm-", "production-")
+   - **title**: Display text (localized via i18n)
+   - **parent**: References parent menuitem name
+   - **action**: References action-view name (only for leaf items)
+   - **order**: Controls sequence (negative for top, positive for bottom)
+   - **icon**: Bootstrap icon name (root or standalone menus)
+   - **icon-background**: Hex color for root menu icon background
+   - **if**: Conditional expression (app config, user roles)
+   - **if-module**: Shows only if module is installed
+
+3. **Ordering Strategy**:
+   - Root menus: Use negative order (-2100, -1800, -1500)
+   - Lower numbers = higher position in menu
+   - Groups within root: Use 100, 200, 300, etc.
+   - Leaves within group: Use 100, 200, 300, etc.
+   - Gap of 100 allows inserting items later
+
+4. **Conditional Visibility**:
+   - **if**: Groovy expression evaluated at runtime
+   - Common patterns:
+     - __config__.app.isApp('moduleName')
+     - __config__.app.getApp('module')?.getSomeSetting()
+     - __user__.hasRole('role.name')
+     - Combine with &&, ||, !
+   - **if-module**: Module name (axelor-sale, axelor-crm)
+   - Both can be used together (if-module AND if)
+
+5. **Icon Usage**:
+   - Root menus: icon + icon-background (colored circle)
+   - Non-root menus: icon only (optional)
+   - Bootstrap icons: Use name without "bi-" prefix
+     - Examples: person-bounding-box, gear, gear-fill, gear-wide-connected
+   - Font Awesome: Can use fa- prefix in some contexts
+
+6. **Action-View Integration**:
+   - Menu item action references action-view name
+   - action-view defines: model, views (kanban/grid/form), domain, context
+   - Multiple view types: User can switch between kanban/grid
+   - view-param for filters, limit, details-view
+   - context variables passed to view (:_internalUserId, :todayDate)
+
+## SECTION B: MENUBAR IN FORMS/GRIDS
+
+7. **Menubar vs Menuitem**:
+   - **menuitem**: Application navigation (left sidebar)
+   - **menubar**: Form/grid actions (top menu bar)
+   - Different elements, different purposes
+   - Menubar is part of form/grid definition
+
+8. **Menubar Structure**:
+   - <menubar> contains one or more <menu> elements
+   - <menu> contains one or more <item> elements
+   - Each menu becomes a dropdown in the menu bar
+   - Items are the actions within each dropdown
+
+9. **Menu Attributes** (in menubar):
+   - **name**: Unique identifier within menubar
+   - **title**: Display text for menu
+   - **icon**: Font Awesome icon (fa-wrench, fa-files-o, fa-download)
+   - **showTitle**: true (show text + icon) or false (icon only)
+
+10. **Item Attributes** (in menubar):
+    - **name**: Unique identifier (optional)
+    - **title**: Display text for menu item
+    - **action**: Action to execute (comma-separated chain)
+    - **prompt**: Confirmation dialog text (for destructive actions)
+    - **if**: Conditional visibility (module check)
+    - **if-module**: Module name check
+    - **showIf**: Runtime condition (field values, status)
+    - **help**: Tooltip text
+
+11. **Action Patterns**:
+    - Save before action: "save,action-method"
+    - Multiple actions: "save,action1,action2"
+    - No save: "action-method" (for read-only operations)
+    - View opening: "action-view-name"
+    - Common pattern: "save,action-method-name"
+
+12. **Prompt Dialogs**:
+    - prompt attribute shows confirmation before action
+    - Use for destructive or batch operations
+    - Text should be clear question ("Are you sure...?")
+    - OK/Cancel buttons automatically added
+    - Action only executes if user clicks OK
+
+13. **Conditional Items**:
+    - **if**: Compile-time check (module, app config)
+    - **showIf**: Runtime check (field values, record state)
+    - Can use both together
+    - showIf evaluated when form/grid loads
+    - Use showIf for status-based visibility
+    - Use if for feature toggles
+
+14. **Multiple Menus Pattern**:
+    - Group related actions in separate menus
+    - Common groups:
+      - **Reports**: Print, export, download actions
+      - **Tools**: Utilities, generators, calculators
+      - **Actions**: State changes, workflows
+      - **More**: Less common operations
+    - Use showTitle=false for icon-only menus (saves space)
+
+15. **Best Practices**:
+    - **menuitem**: Keep hierarchy shallow (max 3-4 levels)
+    - **menuitem**: Use consistent ordering increments (100)
+    - **menuitem**: Add if conditions for optional features
+    - **menuitem**: Use icon-background colors matching module theme
+    - **menubar**: Limit to 2-4 menus per form/grid
+    - **menubar**: Use prompts for destructive batch actions
+    - **menubar**: Group items logically (reports, tools, actions)
+    - **menubar**: Consider mobile (showTitle=false for compact)
+    - **menubar**: Save before actions that modify data
+    - **Both**: Use meaningful icons (wrench=tools, bolt=actions, download=export)
+
+16. **Performance Tips**:
+    - if-module check is faster than if expression
+    - Use if to hide entire menus when module disabled
+    - Avoid complex if expressions (cache in context)
+    - Domain filtering in action-view is better than large if conditions
+-->
