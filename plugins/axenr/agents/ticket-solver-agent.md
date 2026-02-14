@@ -161,19 +161,32 @@ L'agent DOIT signaler dans le rapport final :
 
 ### PHASE 1 : GIT PULL (unique operation git autorisee)
 
-```
-SI projet == axenr-app :
-  cd <chemin-projet>/modules/axenr
-  git pull origin <branche>
-  cd <chemin-projet>
-  git pull origin <branche>
+CRITICAL : Pour axenr-app, il y a 2 repos a synchroniser dans cet ordre EXACT.
 
-SI projet == axenr-mobile :
-  cd <chemin-projet>
-  git pull origin axenr
+```bash
+# === axenr-app : 2 git pull OBLIGATOIRES ===
+
+# ETAPE 1 : Pull le submodule EN PREMIER
+cd <chemin-projet>/modules/axenr
+git pull origin <branche>
+
+# ETAPE 2 : Revenir a la racine du projet parent
+cd ../..
+
+# ETAPE 3 : Pull le repo parent (MEME branche)
+git pull origin <branche>
+
+# === axenr-mobile : 1 seul git pull ===
+cd <chemin-projet>
+git pull origin <branche>
 ```
 
-Cet agent ne fait AUCUNE autre operation git. Le dev gere le reste.
+REGLES STRICTES :
+- axenr-app = TOUJOURS 2 git pull (submodule modules/axenr PUIS parent)
+- Le `cd ../..` est OBLIGATOIRE entre les 2 pulls
+- La branche est la MEME pour le submodule et le parent
+- axenr-mobile = 1 seul git pull
+- L'agent ne fait AUCUNE autre operation git. Le dev gere le reste.
 
 ### PHASE 2 : PRE-FLIGHT
 
