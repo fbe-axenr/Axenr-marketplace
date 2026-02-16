@@ -352,18 +352,42 @@ L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
 
 ### PHASE 3.5 : ANALYSE CRITIQUE DU CODE EXISTANT
 
-CRITICAL : Cette phase est OBLIGATOIRE et ne peut PAS etre sautee.
+CRITICAL : Cette phase est OBLIGATOIRE et ne peut PAS etre sautee. NE PAS passer a la PHASE 4 sans avoir execute cette phase.
 
-AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le terrain :
+AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le terrain.
 
-1. **Identifier les fichiers concernes** par le ticket (ceux a modifier/etendre)
-2. **Lancer `axelor:analyze-code`** sur ces fichiers existants
-3. **Extraire les points critiques** du rapport :
-   - Issues CRITICAL existantes → zones interdites, ne pas y toucher
-   - Issues HIGH existantes → zones fragiles, prudence maximale
-   - Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
-   - Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
-4. **Produire un RAPPORT DE TERRAIN** au format :
+#### Etape 3.5.1 : Identifier les fichiers a analyser
+
+Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
+Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
+
+#### Etape 3.5.2 : Appeler l'agent code-analyzer
+
+L'agent DOIT utiliser le **Task tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse.
+
+Exemple d'appel :
+```
+Task tool:
+  subagent_type: "axelor:code-analyzer"
+  description: "Analyze existing code for ticket #<numero>"
+  prompt: "Analyse les fichiers suivants pour detecter les issues critiques, bad practices, problemes de performance et risques de securite. Fichiers a analyser : <liste des chemins complets des fichiers>. Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW."
+```
+
+SI aucun fichier existant a analyser (tout est nouveau) → afficher :
+```
+[OK] PHASE 3.5 TERMINEE : Aucun fichier existant a analyser (creation uniquement)
+>>  Passage a PHASE 4...
+```
+
+#### Etape 3.5.3 : Extraire les points critiques du rapport
+
+A partir du rapport du code-analyzer, extraire :
+- Issues CRITICAL existantes → zones interdites, ne pas y toucher
+- Issues HIGH existantes → zones fragiles, prudence maximale
+- Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
+- Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
+
+#### Etape 3.5.4 : Produire le RAPPORT DE TERRAIN
 
 ```
 ## RAPPORT DE TERRAIN - Analyse pre-generation

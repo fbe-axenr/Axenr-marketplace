@@ -161,23 +161,40 @@ CRITICAL : L'agent DOIT presenter le plan et ATTENDRE la confirmation AVANT de c
 
 **Objectif** : Analyser le code existant AVANT de generer quoi que ce soit pour connaitre le terrain et eviter de casser ou toucher du code inutilement.
 
-CRITICAL : Cette phase est OBLIGATOIRE. Elle ne peut PAS etre sautee.
+CRITICAL : Cette phase est OBLIGATOIRE. Elle ne peut PAS etre sautee. NE PAS passer a la PHASE 4 sans avoir execute cette phase.
 
-**Actions** :
+**Etape 3.5.1 : Identifier les fichiers a analyser**
 
-1. **Identifier les fichiers existants a analyser** : tous les fichiers du projet qui seront modifies ou etendus (PAS les fichiers a creer)
+Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
+Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
 
-2. **Lancer `axelor:analyze-code`** sur ces fichiers existants
-   - L'agent DOIT appeler le skill axelor:analyze-code (axelor:code-analyzer agent)
-   - L'analyse porte sur le code EXISTANT, pas sur le code a generer
+**Etape 3.5.2 : Appeler l'agent code-analyzer (OBLIGATOIRE)**
 
-3. **Extraire les points critiques** du rapport d'analyse :
-   - Issues CRITICAL → **ZONES INTERDITES** : ne pas toucher ces lignes
-   - Issues HIGH → **ZONES FRAGILES** : prudence maximale si on doit les modifier
-   - Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
-   - Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
+L'agent DOIT utiliser le **Task tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse sur les fichiers existants.
 
-4. **Produire le RAPPORT DE TERRAIN** :
+Exemple d'appel :
+```
+Task tool:
+  subagent_type: "axelor:code-analyzer"
+  description: "Analyze existing code for ticket #<numero>"
+  prompt: "Analyse les fichiers suivants pour detecter les issues critiques, bad practices, problemes de performance et risques de securite. Fichiers a analyser : <liste des chemins complets des fichiers>. Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW."
+```
+
+SI aucun fichier existant a analyser (tout est nouveau) → afficher :
+```
+[OK] PHASE 3.5 TERMINEE : Aucun fichier existant a analyser (creation uniquement)
+>>  Passage a PHASE 4...
+```
+
+**Etape 3.5.3 : Extraire les points critiques du rapport**
+
+A partir du rapport du code-analyzer, extraire :
+- Issues CRITICAL → **ZONES INTERDITES** : ne pas toucher ces lignes
+- Issues HIGH → **ZONES FRAGILES** : prudence maximale si on doit les modifier
+- Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
+- Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
+
+**Etape 3.5.4 : Produire le RAPPORT DE TERRAIN**
 
 ```
 ## RAPPORT DE TERRAIN - Analyse pre-generation
