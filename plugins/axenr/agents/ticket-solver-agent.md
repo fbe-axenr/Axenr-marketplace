@@ -361,16 +361,18 @@ AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le
 Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
 Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
 
-#### Etape 3.5.2 : Appeler l'agent code-analyzer
+#### Etape 3.5.2 : Appeler l'agent code-analyzer (SCOPE TICKET UNIQUEMENT)
 
 L'agent DOIT utiliser le **Task tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse.
+
+CRITICAL : L'analyse porte UNIQUEMENT sur les fichiers identifies a l'etape 3.5.1 (fichiers existants qui seront modifies/etendus par le ticket). NE JAMAIS analyser tout le code du projet. NE JAMAIS scanner des fichiers non lies au ticket. C'est une perte de temps et le rapport devient trop vague.
 
 Exemple d'appel :
 ```
 Task tool:
   subagent_type: "axelor:code-analyzer"
   description: "Analyze existing code for ticket #<numero>"
-  prompt: "Analyse les fichiers suivants pour detecter les issues critiques, bad practices, problemes de performance et risques de securite. Fichiers a analyser : <liste des chemins complets des fichiers>. Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW."
+  prompt: "Analyse UNIQUEMENT les fichiers suivants en lien avec le ticket #<numero> (<titre du ticket>). NE PAS scanner d'autres fichiers. Fichiers a analyser : <liste EXACTE des chemins complets des fichiers identifies en 3.5.1>. Pour chaque fichier, analyse uniquement les zones qui seront impactees par le ticket (champs, methodes, vues concernees). Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW. Le rapport doit etre CONCIS et ACTIONNABLE, pas exhaustif."
 ```
 
 SI aucun fichier existant a analyser (tout est nouveau) → afficher :
@@ -509,7 +511,9 @@ Les agents partenaire Axelor sont appeles EN PREMIER. Leurs resultats sont OBLIG
 | 3 | **axelor-java-style-validator** | SI fichiers Java modifies | OUI pour Java |
 | 4 | **axelor-naming-checker** | TOUJOURS | OUI |
 | 5 | **code-reviewer** | TOUJOURS | OUI |
-| 6 | **code-analyzer** | TOUJOURS | OUI |
+| 6 | **code-analyzer** | UNIQUEMENT sur les fichiers crees/modifies par le ticket | OUI |
+
+CRITICAL (code-analyzer PHASE 5) : Le code-analyzer en validation ne doit analyser QUE les fichiers crees ou modifies par le ticket (liste de PHASE 4). NE PAS analyser tout le projet. Le prompt DOIT lister les fichiers exacts et mentionner le ticket.
 
 **Etape A : Agents partenaire Axelor (OBLIGATOIRE - axenr-mobile)**
 
@@ -517,7 +521,7 @@ Les agents partenaire Axelor sont appeles EN PREMIER. Leurs resultats sont OBLIG
 |-------|-------|-------|-------------|
 | 1 | **axelor-naming-checker** | TOUJOURS | OUI |
 | 2 | **code-reviewer** | TOUJOURS | OUI |
-| 3 | **code-analyzer** | TOUJOURS | OUI |
+| 3 | **code-analyzer** | UNIQUEMENT sur les fichiers crees/modifies par le ticket | OUI |
 
 Collecter TOUTES les violations des agents partenaire. Ne pas les ignorer.
 

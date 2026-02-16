@@ -168,16 +168,18 @@ CRITICAL : Cette phase est OBLIGATOIRE. Elle ne peut PAS etre sautee. NE PAS pas
 Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
 Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
 
-**Etape 3.5.2 : Appeler l'agent code-analyzer (OBLIGATOIRE)**
+**Etape 3.5.2 : Appeler l'agent code-analyzer (OBLIGATOIRE - SCOPE TICKET UNIQUEMENT)**
 
 L'agent DOIT utiliser le **Task tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse sur les fichiers existants.
+
+CRITICAL : L'analyse porte UNIQUEMENT sur les fichiers identifies a l'etape 3.5.1 (fichiers existants qui seront modifies/etendus par le ticket). NE JAMAIS analyser tout le code du projet. NE JAMAIS scanner des fichiers non lies au ticket. C'est une perte de temps et le rapport devient trop vague.
 
 Exemple d'appel :
 ```
 Task tool:
   subagent_type: "axelor:code-analyzer"
   description: "Analyze existing code for ticket #<numero>"
-  prompt: "Analyse les fichiers suivants pour detecter les issues critiques, bad practices, problemes de performance et risques de securite. Fichiers a analyser : <liste des chemins complets des fichiers>. Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW."
+  prompt: "Analyse UNIQUEMENT les fichiers suivants en lien avec le ticket #<numero> (<titre du ticket>). NE PAS scanner d'autres fichiers. Fichiers a analyser : <liste EXACTE des chemins complets des fichiers identifies en 3.5.1>. Pour chaque fichier, analyse uniquement les zones qui seront impactees par le ticket (champs, methodes, vues concernees). Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW. Le rapport doit etre CONCIS et ACTIONNABLE, pas exhaustif."
 ```
 
 SI aucun fichier existant a analyser (tout est nouveau) → afficher :
@@ -293,9 +295,11 @@ Etape A - Agents partenaire Axelor :
 | 3 | axelor-java-style-validator | SI fichiers Java modifies |
 | 4 | axelor-naming-checker | TOUJOURS |
 | 5 | code-reviewer | TOUJOURS |
-| 6 | code-analyzer | TOUJOURS |
+| 6 | code-analyzer | UNIQUEMENT sur les fichiers crees/modifies par le ticket |
 
-Pour axenr-mobile, seuls naming-checker + code-reviewer + code-analyzer.
+CRITICAL (code-analyzer PHASE 5) : Le code-analyzer en validation ne doit analyser QUE les fichiers crees ou modifies par le ticket (liste de PHASE 4). NE PAS analyser tout le projet. Le prompt DOIT lister les fichiers exacts et mentionner le ticket.
+
+Pour axenr-mobile, seuls naming-checker + code-reviewer + code-analyzer (scope ticket uniquement pour code-analyzer).
 
 Etape B - Skills AxENR (EN PARALLELE, avec resultats agents) :
 | Skill | Recoit | Seuil |
