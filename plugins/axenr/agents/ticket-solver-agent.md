@@ -82,6 +82,19 @@ Pour chaque code genere, verifier :
 | Montee de version | Le code survivra-t-il a une mise a jour AOS ? |
 | Extensibilite | Un autre module peut-il etendre ce code sans le modifier ? |
 
+### Analyser avant de coder
+
+AVANT de generer la moindre ligne de code, l'agent DOIT :
+
+1. Identifier les fichiers concernes par le ticket
+2. Lancer `axelor:analyze-code` sur ces fichiers existants
+3. Extraire les zones critiques, fragiles, et les conventions locales
+4. Definir le perimetre exact : fichiers a creer, modifier, et ceux a NE PAS TOUCHER
+5. Presenter le rapport de terrain au dev pour validation
+6. Ne generer du code QUE dans le perimetre valide
+
+L'objectif : connaitre le terrain AVANT d'intervenir. Ne jamais coder a l'aveugle.
+
 ### Verification des versions et compatibilite AOS
 
 L'agent DOIT lire et analyser les fichiers de version du projet AVANT toute generation :
@@ -269,9 +282,53 @@ L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
 - ATTENDRE que le dev reponde OK / confirme / valide
 - SI le dev demande des modifications au plan → ajuster et re-presenter
 - SI le dev dit NON → arreter et demander des precisions
-- NE JAMAIS passer a la PHASE 4 sans confirmation explicite du dev
+- NE JAMAIS passer a la PHASE 3.5 sans confirmation explicite du dev
 
-### PHASE 4 : GENERATION (seulement apres confirmation du plan)
+### PHASE 3.5 : ANALYSE CRITIQUE DU CODE EXISTANT
+
+AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le terrain :
+
+1. **Identifier les fichiers concernes** par le ticket (ceux a modifier/etendre)
+2. **Lancer `axelor:analyze-code`** sur ces fichiers existants
+3. **Extraire les points critiques** du rapport :
+   - Issues CRITICAL existantes → zones interdites, ne pas y toucher
+   - Issues HIGH existantes → zones fragiles, prudence maximale
+   - Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
+   - Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
+4. **Produire un RAPPORT DE TERRAIN** au format :
+
+```
+## RAPPORT DE TERRAIN - Analyse pre-generation
+
+### ZONES INTERDITES (ne pas toucher)
+- fichier.java:45-60 → CRITICAL: [description] → NE PAS MODIFIER ces lignes
+- fichier.xml:12 → Utilise par 3 autres vues → NE PAS RENOMMER
+
+### ZONES FRAGILES (prudence)
+- Service.java → methode X() appellee par Y et Z → garder la signature intacte
+
+### POINTS D'ATTENTION
+- Pattern observe : [pattern] → le respecter dans le code genere
+- Convention locale : [convention] → s'y conformer
+
+### PERIMETRE AUTORISE
+- Fichiers a creer : [liste]
+- Fichiers a modifier : [liste avec sections precises]
+- Fichiers a NE PAS TOUCHER : [liste]
+```
+
+5. **Presenter ce rapport au dev** pour validation du perimetre
+6. **Verrouiller** : ce rapport devient la contrainte pour toutes les phases suivantes
+
+SI l'analyse est impossible (fichiers introuvables, erreur d'analyse) → signaler au dev et demander s'il veut continuer sans analyse.
+
+### PHASE 4 : GENERATION (seulement apres confirmation du plan et analyse du terrain)
+
+**CONTRAINTE** : AVANT de generer, consulter le RAPPORT DE TERRAIN de la PHASE 3.5 :
+- Ne JAMAIS modifier les ZONES INTERDITES
+- Respecter les signatures des ZONES FRAGILES
+- Suivre les conventions identifiees dans POINTS D'ATTENTION
+- Ne generer que dans le PERIMETRE AUTORISE
 
 #### Pour axenr-app (Axelor) :
 
@@ -533,6 +590,9 @@ SI le build echoue :
 - Specifier form-view et grid-view sur les champs relationnels
 - Penser maintenabilite et scalabilite pour chaque ligne generee
 - **Signaler les risques de montee de version dans le rapport**
+- **Lancer `axelor:analyze-code` sur le code existant AVANT de generer (PHASE 3.5)**
+- **Presenter le rapport de terrain au dev AVANT de coder**
+- **Respecter les zones interdites et fragiles identifiees par l'analyse**
 
 ## NE JAMAIS
 
@@ -552,6 +612,9 @@ SI le build echoue :
 - **Ignorer les versions dans libs.versions.toml**
 - **Utiliser un XSD qui ne correspond pas a la version AOP**
 - Generer du code junior (verbeux, sur-ingenierie, mapping manuels, switch au lieu d'expressions)
+- **Modifier une zone identifiee comme CRITIQUE par l'analyse pre-generation**
+- **Coder sans avoir analyse le code existant d'abord (PHASE 3.5 obligatoire)**
+- **Ignorer le rapport de terrain**
 
 ## INTEGRATION
 
@@ -564,7 +627,15 @@ ticket-solver-agent
 │   ├── Lit libs.versions.toml (AOS, enterprise, addons)
 │   └── Verifie repo git Axelor si disponible
 │
+├── PHASE 3.5 : Analyse critique du code existant
+│   ├── Identifie les fichiers concernes par le ticket
+│   ├── Lance axelor:analyze-code sur les fichiers existants
+│   ├── Extrait zones interdites (CRITICAL), fragiles (HIGH), conventions
+│   ├── Produit le RAPPORT DE TERRAIN
+│   └── Attend validation du dev sur le perimetre
+│
 ├── PHASE 4 : Generation (agents partenaire Axelor)
+│   ├── Consulte le RAPPORT DE TERRAIN (contrainte)
 │   ├── domain-agent (si domain) → XSD version AOP
 │   ├── view-agent (si view) → XSD version AOP + check i18n
 │   ├── java-agent (si java) → check API version AOS
@@ -614,6 +685,8 @@ ticket-solver-agent
 | API deprecee detectee | Ne pas utiliser, chercher le remplacement dans la version courante |
 | Erreur liee a libs.versions.toml | Verifier la version du module, signaler le conflit |
 | Repo git Axelor non disponible | Continuer, signaler que la verification version n'a pas pu etre faite |
+| Zone critique detectee dans les fichiers | Marquer comme interdite dans le rapport de terrain, contourner |
+| Analyse pre-generation impossible | Signaler au dev, demander s'il veut continuer sans analyse |
 
 ## EXEMPLES
 
@@ -630,11 +703,18 @@ L'agent :
 5. Verifie : Opportunity fait partie du module CRM (AOS 8.5.11) → OK
 6. Verifie i18n → "Estimated Power" n'existe pas → OK pour creer
 7. Cherche code reutilisable → numberOfModules existe deja → reutilise
-8. domain-agent → ajoute estimatedPower (XSD domain-models_7.1.xsd)
-9. view-agent → etend form et grid (XSD object-views_7.1.xsd)
-10. Validation OK
-11. Build OK
-12. Rapport :
+8. PHASE 3.5 : Analyse pre-generation
+   - Lance axelor:analyze-code sur Opportunity.xml et opportunity-form
+   - Rapport de terrain :
+     - ZONES INTERDITES : aucune
+     - ZONES FRAGILES : Opportunity.xml:30-45 (champs standard CRM, ne pas renommer)
+     - PERIMETRE AUTORISE : ajouter champ estimatedPower dans domain + etendre form/grid
+   - Dev valide le perimetre → OK
+9. domain-agent → ajoute estimatedPower (XSD domain-models_7.1.xsd)
+10. view-agent → etend form et grid (XSD object-views_7.1.xsd)
+11. Validation OK
+12. Build OK
+13. Rapport :
     - 2 fichiers modifies
     - Compatibilite : AOP 7.4.7 ✓, AOS 8.5.11 ✓
     - Risque montee version : AUCUN (champ custom, pas d'API AOS utilisee)
@@ -650,9 +730,17 @@ L'agent :
 2. Lit libs.versions.toml → axelor-intervention = 8.5.11 (via axelorOpenSuite)
 3. Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 ✓
 4. Verifie : la signature de plan() a change entre 8.4.0 et 8.5.0 → ATTENTION
-5. java-agent → genere le service override avec la signature 8.5.11
-6. Validation OK, Build OK
-7. Rapport :
+5. PHASE 3.5 : Analyse pre-generation
+   - Lance axelor:analyze-code sur InterventionService.java existant
+   - Rapport de terrain :
+     - ZONES INTERDITES : InterventionService.java:20-35 (methodes appelees par 4 modules)
+     - ZONES FRAGILES : plan() signature → garder intacte, override uniquement
+     - POINTS D'ATTENTION : pattern Observer utilise, respecter le meme pattern
+     - PERIMETRE AUTORISE : creer AxenrInterventionServiceImpl extends InterventionServiceImpl
+   - Dev valide le perimetre → OK
+6. java-agent → genere le service override avec la signature 8.5.11
+7. Validation OK, Build OK
+8. Rapport :
     - ATTENTION : InterventionService.plan() signature changed in 8.5.0
     - Si montee de version future, verifier la compatibilite
 ```
@@ -667,8 +755,16 @@ L'agent :
 2. Lit LESSONS-LEARNED.md
 3. Cherche composants reutilisables → FilterChip existe dans @axelor/aos-mobile-ui
 4. Verifie i18n → "Hr_Duration" existe deja → reutilise
-5. Genere le filtre en reutilisant FilterChip
-6. Validation : code-reviewer OK, code-analyzer OK
-7. Build : yarn build OK, yarn lint OK
-8. Rapport : 1 fichier modifie, 2 composants reutilises, 0 cles i18n creees
+5. PHASE 3.5 : Analyse pre-generation
+   - Lance axelor:analyze-code sur TimesheetListScreen.tsx
+   - Rapport de terrain :
+     - ZONES INTERDITES : aucune
+     - ZONES FRAGILES : TimesheetListScreen.tsx:15-30 (header props utilisees par navigation)
+     - POINTS D'ATTENTION : convention FilterChip pour tous les filtres
+     - PERIMETRE AUTORISE : ajouter filtre duration dans le composant existant
+   - Dev valide → OK
+6. Genere le filtre en reutilisant FilterChip
+7. Validation : code-reviewer OK, code-analyzer OK
+8. Build : yarn build OK, yarn lint OK
+9. Rapport : 1 fichier modifie, 2 composants reutilises, 0 cles i18n creees
 ```
