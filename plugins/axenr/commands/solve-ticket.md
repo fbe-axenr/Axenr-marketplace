@@ -240,13 +240,19 @@ A partir du rapport du code-analyzer, extraire :
 
 ## PHASE 4 : GENERATION
 
-**Objectif** : Generer le code en respectant le plan ET le rapport de terrain.
+**Objectif** : Generer le code en respectant le plan, le rapport de terrain ET les lecons apprises.
 
-CRITICAL : AVANT de generer la moindre ligne, consulter le RAPPORT DE TERRAIN de PHASE 3.5 :
+CRITICAL 1 : AVANT de generer la moindre ligne, consulter le RAPPORT DE TERRAIN de PHASE 3.5 :
 - Ne JAMAIS modifier les ZONES INTERDITES
 - Respecter les signatures des ZONES FRAGILES
 - Suivre les conventions identifiees dans POINTS D'ATTENTION
 - Ne generer que dans le PERIMETRE AUTORISE
+
+CRITICAL 2 : AVANT de generer, consulter les LESSONS-LEARNED.md chargees en PHASE 2.
+- Filtrer les lecons pertinentes au type de ticket (domain, view, java, i18n, etc.)
+- APPLIQUER chaque lecon pertinente pendant la generation (pas apres)
+- En particulier : LESSON-061 (workflow i18n), LESSON-062 (ne pas supprimer de code), LESSON-063 (ne pas modifier hors scope)
+- SI le code genere viole une lecon connue → corriger IMMEDIATEMENT avant de passer a PHASE 5
 
 **Pour axenr-app** : appeler les agents dans cet ordre strict :
 1. **domain-agent** (si domains concernes) → XSD version AOP

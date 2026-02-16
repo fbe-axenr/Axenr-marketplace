@@ -9,9 +9,9 @@
 
 | Metrique | Valeur |
 |----------|--------|
-| Total lecons | 52 |
+| Total lecons | 55 |
 | Lecons promues dans CLAUDE.md | 0 |
-| Lecons en attente | 52 |
+| Lecons en attente | 55 |
 | Taux de promotion | 0% |
 
 ---
@@ -392,6 +392,37 @@
 - **Correction** : `custom_fr.csv` est UNIQUEMENT pour les cles NON presentes dans le code (labels dynamiques, donnees importees). Les cles du code vont dans `messages_fr.csv`
 - **Occurrences** : 1
 - **Tickets** : initial-seed
+- **Promu** : false
+
+### LESSON-061 : Editer messages_fr.csv AVANT d'avoir lance ./gradlew i18n
+- **Type** : i18n
+- **Projet** : axenr-app
+- **Erreur** : Editer `messages_fr.csv` pour ajouter une traduction SANS avoir lance `./gradlew i18n` d'abord. La nouvelle cle n'existe pas encore dans le fichier
+- **Correction** : Workflow OBLIGATOIRE : 1) Ajouter le champ/message avec cle EN dans le code 2) Lancer `./gradlew i18n -p modules/axenr` 3) Verifier que la cle apparait dans `messages.csv` 4) PUIS editer `messages_fr.csv` pour la traduction FR
+- **Occurrences** : 1
+- **Tickets** : confirmed-by-dev
+- **Promu** : false
+
+---
+
+## ERREURS SCOPE TICKET
+
+### LESSON-062 : Supprimer du code existant (doublons inclus)
+- **Type** : view
+- **Projet** : both
+- **Erreur** : Supprimer du code existant lors d'un ticket, meme s'il semble inutile ou en doublon (ex: supprimer un `<field>` en double, supprimer une action obsolete, supprimer un import inutilise)
+- **Correction** : Ne JAMAIS supprimer du code existant. Le ticket doit contenir UNIQUEMENT les ajouts/modifications demandes. Les doublons existants sont laisses en l'etat. Seul un ticket de nettoyage dedie peut supprimer du code
+- **Occurrences** : 1
+- **Tickets** : confirmed-by-dev
+- **Promu** : false
+
+### LESSON-063 : Modifier du code non demande par le ticket
+- **Type** : view
+- **Projet** : both
+- **Erreur** : Profiter d'un ticket pour renommer des elements, corriger des doublons, refactorer du code voisin, nettoyer des imports, harmoniser des conventions dans des fichiers non concernes par le ticket
+- **Correction** : Le commit doit contenir STRICTEMENT ce que le ticket demande. Aucun renommage, aucun nettoyage, aucune correction hors scope. Si un probleme est detecte, le signaler au dev sans le corriger
+- **Occurrences** : 1
+- **Tickets** : confirmed-by-dev
 - **Promu** : false
 
 ---
