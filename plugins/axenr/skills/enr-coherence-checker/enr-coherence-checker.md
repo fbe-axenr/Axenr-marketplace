@@ -19,7 +19,7 @@ Analyze generated or modified code (domains, views, actions, Java, Groovy) and d
 
 | Output | Format |
 |--------|--------|
-| violations | List of `{severity, rule, file, line, message, fix}` |
+| violations | List of `{severity, rule, file, line, message, fix, doc_ref}` |
 | score | Coherence score 0-100 |
 | summary | Human-readable summary of findings |
 
@@ -420,6 +420,12 @@ STEP 4: CALCULATE SCORE
   - MEDIUM: -5 per violation
   - LOW: -2 per violation
   - Minimum: 0
+
+STEP 5: ENRICH WITH DOC REFERENCES
+  FOR each violation:
+    - Add doc_ref field linking to the rule ID (e.g., "RULE1-CHECK3", "ENR-AP-01")
+    - Format: "<RULE_ID> | enr-coherence-checker"
+    - This allows traceability back to the exact rule definition
 
 RETURN {violations, score, summary, reinforced_rules_used, agents_called}
 ```

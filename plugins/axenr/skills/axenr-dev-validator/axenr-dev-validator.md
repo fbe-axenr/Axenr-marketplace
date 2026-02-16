@@ -24,7 +24,7 @@ Analyze generated or modified code and detect violations of Axelor/AxENR develop
 
 | Output | Format |
 |--------|--------|
-| violations | List of `{severity, category, rule, file, line, message, fix}` |
+| violations | List of `{severity, category, rule, file, line, message, fix, doc_ref}` |
 | score | Quality score 0-100 |
 | summary | Human-readable summary |
 
@@ -103,6 +103,77 @@ DOM-09: SCHEMA VERSION (MEDIUM)
 
 DOM-10: COPY ATTRIBUTE (LOW)
   Fields that should not be copied (status, sequence, computed totals) SHOULD have copy="false".
+
+DOM-11: RELATION DIRECTION AXENR→AOS (HIGH)
+  Relations from AxENR entities to AOS entities MUST be ManyToOne (AxENR → AOS).
+  NEVER create relations from AOS entities pointing to AxENR (would require modifying AOS).
+
+  BAD:
+  <!-- In an AOS entity extension: adding a relation TO AxENR -->
+  <one-to-many name="axenrInstallations" ref="fr.axenr.db.AxenrInstallation" mappedBy="project"/>
+  <!-- This forces AOS entity to "know" AxENR → breaks independence -->
+
+  GOOD:
+  <!-- In AxENR entity: ManyToOne pointing TO AOS -->
+  <many-to-one name="project" ref="com.axelor.apps.project.db.Project" title="Project"/>
+  <!-- AxENR knows AOS, but AOS doesn't know AxENR → clean dependency -->
+
+  Exceptions:
+  - Track fields on AOS entities (managed by Axelor framework, not relations)
+  - Custom fields via attrs (JSON storage, no schema dependency)
+
+DOM-12: NO BUSINESS LOGIC IN DOMAINS (MEDIUM)
+  Domain XML MUST NOT contain business logic. Use formula fields or Java services.
+  Domains define DATA STRUCTURE, not behavior.
+
+  BAD:
+  <string name="fullAddress" expression="CONCAT(street, ' ', city, ' ', zip)"/>
+  <!-- SQL expression with business logic in domain -->
+
+  BAD:
+  <extra-code><![CDATA[
+    public BigDecimal computeTotal() {
+      return this.quantity.multiply(this.unitPrice);
+    }
+  ]]></extra-code>
+  <!-- Business logic in extra-code instead of service -->
+
+  GOOD:
+  <!-- Domain: just the field -->
+  <decimal name="totalAmount" title="Total" readonly="true"/>
+  <!-- Service: the computation -->
+  // In AxEnrOrderLineService.java:
+  public BigDecimal computeTotal(OrderLine line) {
+    return line.getQuantity().multiply(line.getUnitPrice());
+  }
+
+  Allowed in extra-code:
+  - Constants (STATUS_DRAFT, TYPE_PV, etc.)
+  - Simple getters for display (getFullName for namecolumn)
+  - Enum-like static final fields
+
+DOM-13: SEQUENCES IN DEDICATED CONFIG (MEDIUM)
+  AxENR sequences MUST be defined in dedicated data-init files, not inline in domains.
+  Sequence names MUST be prefixed with 'axenr'.
+
+  BAD:
+  <!-- Sequence defined nowhere, or hardcoded in Java -->
+  order.setReference("INST-" + String.format("%06d", id));
+
+  BAD:
+  <!-- Sequence in random data-init file mixed with other data -->
+  <bind node="MetaSequence">
+    <bind node="name" field="name" eval="'installation'"/>
+  </bind>
+
+  GOOD:
+  <!-- Dedicated file: data-init/input/axenr-sequences.xml -->
+  <bind node="MetaSequence" search="self.name = :name" update="false">
+    <bind node="name" field="name" eval="'axenrInstallation'"/>
+    <bind node="prefix" field="prefix" eval="'INST'"/>
+    <bind node="padding" field="padding" eval="6"/>
+  </bind>
+  <!-- And in Java: use SequenceService to get the next value -->
 ```
 
 ---
@@ -566,7 +637,7 @@ This skill MUST read LESSONS-LEARNED.md BEFORE running its checks. Lessons match
 
 | Lesson Type | Validator Category | Static Rules |
 |-------------|-------------------|--------------|
-| domain | CATEGORY 1 | DOM-01 to DOM-10 |
+| domain | CATEGORY 1 | DOM-01 to DOM-13 |
 | view | CATEGORY 2 | VIEW-01 to VIEW-12 |
 | action | CATEGORY 3 | ACT-01 to ACT-10 |
 | java | CATEGORY 4 | JAVA-01 to JAVA-14 |
@@ -574,7 +645,7 @@ This skill MUST read LESSONS-LEARNED.md BEFORE running its checks. Lessons match
 | naming | CATEGORY 6 | EXT-01 to EXT-06 |
 | build, version | CATEGORY 7 | GIT-01 to GIT-05 |
 | rest | CATEGORY 4 | JAVA-XX (extended) |
-| migration | Dynamic only | No static rule |
+| migration | migration-validator | MIG-01 to MIG-27 |
 | mobile | Skipped | Handled by mobile-specific checks |
 
 ---
@@ -612,7 +683,7 @@ STEP 1: CALL AXELOR PARTNER AGENTS
 STEP 2: RUN AXENR STATIC + DYNAMIC RULES
   FOR each file in files_to_check:
     1. Determine file type from extension and path:
-       - *.xml in domains/ -> DOMAIN validation (DOM-01 to DOM-10)
+       - *.xml in domains/ -> DOMAIN validation (DOM-01 to DOM-13)
        - *.xml in views/  -> VIEW + ACTION validation (VIEW-01 to VIEW-12, ACT-01 to ACT-10)
        - *.java in action/ -> JAVA CONTROLLER validation (JAVA-01 to JAVA-14)
        - *.java in service/ -> JAVA SERVICE validation (JAVA-01 to JAVA-14)
@@ -639,6 +710,12 @@ STEP 4: CALCULATE SCORE
   - MEDIUM: -3 per violation
   - LOW: -1 per violation
   - Minimum: 0
+
+STEP 5: ENRICH WITH DOC REFERENCES
+  FOR each violation:
+    - Add doc_ref field linking to the rule ID (e.g., "DOM-11", "JAVA-01")
+    - Format: "<CATEGORY>-<RULE_ID> | axenr-dev-validator"
+    - This allows traceability back to the exact rule definition
 
 RETURN {violations, score, summary, reinforced_rules_used, agents_called}
 ```
