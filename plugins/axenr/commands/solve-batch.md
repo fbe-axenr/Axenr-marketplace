@@ -39,7 +39,8 @@ If any required field is missing: ASK the developer.
 - Each instance receives:
   - The shared context from pre-flight
   - Its own ticket (number, title, description)
-- Each instance runs PHASES 3-7 independently
+- Each instance runs PHASES 3, 3.5, 4, 5, 6, 7 independently (toutes les phases, dans l'ordre, avec checkpoints)
+- CRITICAL : chaque instance DOIT executer PHASE 3.5 (analyse critique du code existant) - elle ne peut PAS etre sautee
 
 ### STEP 4 : CONSOLIDATION
 - Collect results from both instances

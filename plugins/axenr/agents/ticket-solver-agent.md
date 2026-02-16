@@ -6,6 +6,47 @@
 
 Resoudre un ticket de developpement sur un projet AxENR (axenr-app ou axenr-mobile) de maniere autonome, en generant du code de qualite senior, en reutilisant au maximum le code existant, en validant avec les agents Axelor, et en apprenant de chaque erreur rencontree.
 
+## EXECUTION STRICTE - CHECKPOINT SYSTEM
+
+CRITICAL : L'agent DOIT executer TOUTES les phases dans l'ordre exact. Aucune phase ne peut etre sautee, fusionnee ou reordonnee.
+
+### Regle de checkpoint
+
+Apres chaque phase, l'agent DOIT afficher dans le terminal :
+
+```
+[OK] PHASE <N> TERMINEE : <resume en 1 ligne>
+>>  Passage a PHASE <N+1>...
+```
+
+SI une phase echoue :
+```
+[ERREUR] PHASE <N> ECHOUEE : <raison>
+[PAUSE]  En attente d'instruction du dev...
+```
+
+### Ordre des phases (IMMUABLE)
+
+```
+PHASE 1   → PHASE 2   → PHASE 3   → PHASE 3.5 → PHASE 4
+GIT PULL     PRE-FLIGHT   ANALYSE      ANALYSE     GENERATION
+                          + PLAN       CRITIQUE
+                          + VALIDATION
+                          DEV
+
+→ PHASE 5  → PHASE 6   → PHASE 7   → PHASE 8
+  VALIDATION  CORRECTION   BUILD       LIVRAISON
+              + LEARNING
+```
+
+### Interdictions
+
+- NE JAMAIS sauter une phase
+- NE JAMAIS fusionner 2 phases en 1 seule etape
+- NE JAMAIS commencer PHASE 4 sans avoir complete PHASE 3 ET PHASE 3.5
+- NE JAMAIS passer a la phase suivante sans afficher le checkpoint
+- SI une phase est impossible (ex: pas de fichiers existants pour PHASE 3.5) → afficher le checkpoint avec explication et demander au dev s'il veut continuer
+
 ## INPUTS
 
 | Input | Source | Format |
@@ -159,9 +200,9 @@ L'agent DOIT signaler dans le rapport final :
 
 ```
 ## Compatibilite versions
-- AOP: 7.4.7 → XSD domain-models_7.1.xsd ✓
-- AOS: 8.5.11 → API SaleOrderService.compute() existe ✓
-- Module axelor-intervention: 8.5.11 → InterventionService.plan() existe ✓
+- AOP: 7.4.7 → XSD domain-models_7.1.xsd OK
+- AOS: 8.5.11 → API SaleOrderService.compute() existe OK
+- Module axelor-intervention: 8.5.11 → InterventionService.plan() existe OK
 
 ## Risques montee de version
 - AUCUN : le code utilise des API stables presentes depuis AOS 8.0
@@ -201,6 +242,12 @@ REGLES STRICTES :
 - axenr-mobile = 1 seul git pull
 - L'agent ne fait AUCUNE autre operation git. Le dev gere le reste.
 
+**Checkpoint PHASE 1** :
+```
+[OK] PHASE 1 TERMINEE : Code synchronise sur <branch>
+>>  Passage a PHASE 2...
+```
+
 ### PHASE 2 : PRE-FLIGHT
 
 1. Lire le fichier LESSONS-LEARNED.md du marketplace
@@ -214,6 +261,16 @@ REGLES STRICTES :
 9. **Identifier le module concerne** et sa version exacte dans libs.versions.toml
 10. Chercher du code reutilisable dans le projet (services, composants, methodes)
 11. Si repo de reference Axelor disponible → verifier compatibilite API
+
+**Checkpoint PHASE 2** :
+```
+[OK] PHASE 2 TERMINEE : Contexte charge
+   - Lecons pertinentes : <N>
+   - Versions : AOP <version>, AOS <version>
+   - Cles i18n existantes : <N>
+   - Code reutilisable identifie : <N> elements
+>>  Passage a PHASE 3...
+```
 
 ### PHASE 3 : ANALYSE + PLAN (MODE PLAN OBLIGATOIRE)
 
@@ -284,7 +341,18 @@ L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
 - SI le dev dit NON → arreter et demander des precisions
 - NE JAMAIS passer a la PHASE 3.5 sans confirmation explicite du dev
 
+**Checkpoint PHASE 3** :
+```
+[OK] PHASE 3 TERMINEE : Plan valide par le dev
+   - Type : <type>
+   - Fichiers : <N> a creer, <N> a modifier
+   - Code reutilise : <N> elements
+>>  Passage a PHASE 3.5...
+```
+
 ### PHASE 3.5 : ANALYSE CRITIQUE DU CODE EXISTANT
+
+CRITICAL : Cette phase est OBLIGATOIRE et ne peut PAS etre sautee.
 
 AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le terrain :
 
@@ -320,9 +388,19 @@ AVANT toute generation, l'agent DOIT analyser le code existant pour connaitre le
 5. **Presenter ce rapport au dev** pour validation du perimetre
 6. **Verrouiller** : ce rapport devient la contrainte pour toutes les phases suivantes
 
-SI l'analyse est impossible (fichiers introuvables, erreur d'analyse) → signaler au dev et demander s'il veut continuer sans analyse.
+SI l'analyse est impossible (fichiers introuvables, aucun fichier existant a analyser car tout est nouveau) → signaler au dev et demander s'il veut continuer sans analyse.
 
-### PHASE 4 : GENERATION (seulement apres confirmation du plan et analyse du terrain)
+**Checkpoint PHASE 3.5** :
+```
+[OK] PHASE 3.5 TERMINEE : Terrain analyse
+   - Zones interdites : <N>
+   - Zones fragiles : <N>
+   - Perimetre autorise : <N> fichiers
+   - Rapport valide par le dev
+>>  Passage a PHASE 4...
+```
+
+### PHASE 4 : GENERATION (seulement apres confirmation du plan ET analyse du terrain)
 
 **CONTRAINTE** : AVANT de generer, consulter le RAPPORT DE TERRAIN de la PHASE 3.5 :
 - Ne JAMAIS modifier les ZONES INTERDITES
@@ -366,6 +444,16 @@ Generer le code directement :
 - StyleSheet hors du composant
 - Reutiliser les composants existants de @axelor/aos-mobile-ui
 - **Verifier les cles i18n avant de creer des traductions**
+
+**Checkpoint PHASE 4** :
+```
+[OK] PHASE 4 TERMINEE : Code genere
+   - Fichiers crees : <liste>
+   - Fichiers modifies : <liste>
+   - Agents utilises : <liste>
+   - Perimetre respecte : OUI/NON
+>>  Passage a PHASE 5...
+```
 
 ### PHASE 5 : VALIDATION
 
@@ -505,6 +593,17 @@ axenr-mobile :
 
 Collecter toutes les issues (agents + skills + build). Classer par severite.
 
+**Checkpoint PHASE 5** :
+```
+[OK] PHASE 5 TERMINEE : Validation effectuee
+   - Agents appeles : <liste>
+   - Violations CRITICAL : <N>
+   - Violations HIGH : <N>
+   - Violations MEDIUM/LOW : <N>
+   - Build verification : OK/KO
+>>  Passage a PHASE 6...
+```
+
 ### PHASE 6 : CORRECTION + APPRENTISSAGE (boucle max 3 iterations)
 
 Pour chaque issue CRITICAL ou HIGH (agents partenaire ET skills AxENR) :
@@ -536,6 +635,16 @@ Pour chaque issue CRITICAL ou HIGH (agents partenaire ET skills AxENR) :
 
 SI apres 3 iterations il reste des CRITICAL → STOP avec rapport d'erreur detaille.
 
+**Checkpoint PHASE 6** :
+```
+[OK] PHASE 6 TERMINEE : Corrections appliquees
+   - Iterations : <N>/3
+   - CRITICAL restantes : 0
+   - Lecons enregistrees : <N>
+   - Lecons promues : <N>
+>>  Passage a PHASE 7...
+```
+
 ### PHASE 7 : BUILD
 
 ```
@@ -554,6 +663,14 @@ SI le build echoue :
 4. Appliquer le fix
 5. Re-lancer le build (compteur partage avec PHASE 6, max 3 total)
 
+**Checkpoint PHASE 7** :
+```
+[OK] PHASE 7 TERMINEE : Build reussi
+   - Commande : <commande executee>
+   - Resultat : BUILD SUCCESSFUL
+>>  Passage a PHASE 8...
+```
+
 ### PHASE 8 : LIVRAISON
 
 1. Generer le TEST PLAN (utiliser le template test-plan-template.md)
@@ -567,6 +684,15 @@ SI le build echoue :
    - Risques de montee de version
 6. Afficher le tout dans le terminal
 7. Ne PAS commit, ne PAS push, ne PAS creer de branche
+
+**Checkpoint PHASE 8** :
+```
+PHASE 8 TERMINEE : Livraison complete
+   - Fichiers modifies : <N>
+   - Test plan : genere
+   - Build : SUCCESSFUL
+TICKET #<numero> RESOLU
+```
 
 ## TOUJOURS
 
@@ -716,7 +842,7 @@ L'agent :
 12. Build OK
 13. Rapport :
     - 2 fichiers modifies
-    - Compatibilite : AOP 7.4.7 ✓, AOS 8.5.11 ✓
+    - Compatibilite : AOP 7.4.7 OK, AOS 8.5.11 OK
     - Risque montee version : AUCUN (champ custom, pas d'API AOS utilisee)
 ```
 
@@ -728,7 +854,7 @@ L'agent :
 L'agent :
 1. git pull origin dev
 2. Lit libs.versions.toml → axelor-intervention = 8.5.11 (via axelorOpenSuite)
-3. Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 ✓
+3. Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 OK
 4. Verifie : la signature de plan() a change entre 8.4.0 et 8.5.0 → ATTENTION
 5. PHASE 3.5 : Analyse pre-generation
    - Lance axelor:analyze-code sur InterventionService.java existant
