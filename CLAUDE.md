@@ -30,6 +30,7 @@ axenr-marketplace/
 | Agent | Role |
 |-------|------|
 | ticket-solver-agent | Resolution autonome de tickets avec auto-apprentissage |
+| erp-consultant-enr | Consultant ERP senior ENR - Challenge et valide la coherence metier (genericite, temporalite, reutilisabilite) |
 
 ### Skills AxENR (plugins/axenr/skills/)
 

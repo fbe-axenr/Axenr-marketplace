@@ -298,6 +298,44 @@ CRITICAL : L'agent DOIT passer en mode plan et attendre la confirmation du dev A
 5. **Verifier que les API AOS utilisees existent dans la version du projet**
 6. SI une information manque dans le ticket et qu'elle est indispensable → DEMANDER au dev. Ne pas deviner.
 
+**Etape 3.1b : Consultation ERP Consultant ENR (CONDITIONNELLE)**
+
+SI le ticket contient des mots-cles ENR, l'agent DOIT consulter le consultant metier ENR AVANT de presenter le plan.
+
+Mots-cles de declenchement (case-insensitive) :
+
+| Categorie | Mots-cles |
+|-----------|-----------|
+| Types ENR | photovoltaique, PV, IRVE, borne, recharge, wallbox, PAC, pompe a chaleur, eolien, eolienne, geothermie, biomasse, solaire thermique, ENR, renouvelable |
+| Cycle de vie | raccordement, CONSUEL, Enedis, RTE, DOE, mise en service, declaration prealable, permis de construire, DAACT, MEO, ABF |
+| Technique | puissance, kWc, kVA, onduleur, panneau, module, installation, chantier, toiture, ombriere, capteur, dimensionnement |
+| Metier | affaire, intervention, maintenance, contrat maintenance, parc installation, bureau etude, passation |
+
+SI au moins 1 mot-cle detecte dans le titre OU la description du ticket :
+
+```
+Task tool:
+  subagent_type: "axenr:erp-consultant-enr"
+  description: "ENR business validation for ticket #<numero>"
+  prompt: "Valide la coherence metier ENR de ce ticket :
+    - Ticket #<numero> : <titre>
+    - Description : <description>
+    - Projet : <projet>
+    - Fichiers concernes : <liste>
+    Applique ton protocole de validation : genericite, temporalite, existence dans le modele, impact transverse.
+    Donne ton verdict : VALIDE, CHALLENGE, ou BLOQUANT."
+```
+
+Gestion du verdict :
+
+| Verdict | Action du ticket-solver |
+|---------|------------------------|
+| VALIDE | Continuer normalement, mentionner la validation dans le plan |
+| CHALLENGE | Integrer les recommandations du consultant dans le plan, presenter les ajustements au dev |
+| BLOQUANT | STOP - Presenter le probleme au dev, attendre reformulation du ticket |
+
+SI aucun mot-cle ENR detecte → sauter cette etape, continuer directement a 3.2.
+
 **Etape 3.2 : Presentation du plan au dev**
 
 L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
@@ -323,6 +361,10 @@ L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
 |---------|--------|--------|
 | path/to/file.xml | Creer / Modifier / Etendre | Description courte |
 
+### Avis consultant ENR (si applicable)
+- Verdict : VALIDE / CHALLENGE / BLOQUANT
+- Recommandations : <resume>
+
 ### Agents utilises
 1. <agent-1> → pour <quoi>
 2. <agent-2> → pour <quoi>
@@ -347,6 +389,7 @@ L'agent DOIT presenter un plan structure au dev et ATTENDRE sa confirmation :
    - Type : <type>
    - Fichiers : <N> a creer, <N> a modifier
    - Code reutilise : <N> elements
+   - Consultant ENR : <VALIDE/CHALLENGE/BLOQUANT/NON APPLICABLE>
 >>  Passage a PHASE 3.5...
 ```
 
@@ -737,6 +780,8 @@ TICKET #<numero> RESOLU
 - Verifier les fichiers i18n AVANT de creer des cles de traduction
 - **Verifier la compatibilite API avec la version AOS du projet**
 - **Verifier le repo git Axelor si disponible pour les changements d'API**
+- Consulter erp-consultant-enr SI le ticket contient des mots-cles ENR (PHASE 3, etape 3.1b)
+- Respecter le verdict du consultant ENR : VALIDE (continuer), CHALLENGE (ajuster le plan), BLOQUANT (arreter)
 - Utiliser les agents Axelor partenaire pour la generation ET la validation
 - Utiliser les agents de validation pour les DEUX projets (app et mobile)
 - Passer les lecons LESSONS-LEARNED.md aux skills de validation pour le renforcement bidirectionnel
@@ -764,6 +809,7 @@ TICKET #<numero> RESOLU
 - Deviner une information manquante au lieu de demander
 - Ecrire des fichiers de lecon ou de config dans le projet
 - Utiliser des mots francais dans les noms techniques
+- Ignorer un verdict BLOQUANT du consultant ENR
 - Depasser 3 tentatives de correction
 - Push automatiquement
 - Creer du code quand du code existant peut etre reutilise ou etendu
@@ -786,6 +832,14 @@ ticket-solver-agent
 │   ├── Lit gradle.properties (aopVersion, version)
 │   ├── Lit libs.versions.toml (AOS, enterprise, addons)
 │   └── Verifie repo git Axelor si disponible
+│
+├── PHASE 3 (Etape 3.1b) : Consultation ERP Consultant ENR (si mots-cles ENR)
+│   ├── Detecte mots-cles ENR dans titre/description du ticket
+│   ├── SI detecte → appelle erp-consultant-enr (Task tool)
+│   ├── Recoit verdict : VALIDE, CHALLENGE, ou BLOQUANT
+│   ├── VALIDE → continue, mentionne dans le plan
+│   ├── CHALLENGE → integre recommandations dans le plan
+│   └── BLOQUANT → STOP, attend reformulation du dev
 │
 ├── PHASE 3.5 : Analyse critique du code existant
 │   ├── Identifie les fichiers concernes par le ticket
@@ -847,6 +901,10 @@ ticket-solver-agent
 | Repo git Axelor non disponible | Continuer, signaler que la verification version n'a pas pu etre faite |
 | Zone critique detectee dans les fichiers | Marquer comme interdite dans le rapport de terrain, contourner |
 | Analyse pre-generation impossible | Signaler au dev, demander s'il veut continuer sans analyse |
+| Consultant ENR retourne BLOQUANT | STOP immediat, presenter le probleme au dev, attendre reformulation |
+| Consultant ENR retourne CHALLENGE | Integrer les recommandations dans le plan, presenter au dev pour validation |
+| Consultant ENR non disponible | Signaler dans le rapport, continuer avec prudence sur la coherence ENR |
+| Mots-cles ENR non detectes mais ticket ENR evident | L'agent PEUT appeler le consultant ENR au jugement s'il detecte un contexte ENR implicite |
 
 ## EXEMPLES
 
