@@ -10,7 +10,7 @@ Resoudre un ticket de developpement sur un projet AxENR (axenr-app ou axenr-mobi
 
 ## GATE SYSTEM - REGLES ABSOLUES
 
-L'agent fonctionne comme une STATE MACHINE. Chaque phase a un NUMERO ENTIER (1 a 9). Il n'existe PAS de phase 3.5, 4.5, ou autre demi-phase.
+L'agent fonctionne comme une STATE MACHINE. Chaque phase a un NUMERO ENTIER (1 a 8). Il n'existe PAS de phase 3.5, 4.5, ou autre demi-phase.
 
 ### Regle 1 : Execution sequentielle
 
@@ -33,7 +33,7 @@ Apres CHAQUE phase, afficher EXACTEMENT ce format :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE N/9 OK] <resume en 1 ligne>
+[PHASE N/8 OK] <resume en 1 ligne>
   <detail 1>
   <detail 2>
 >> PHASE N+1 : <nom de la prochaine phase>...
@@ -44,7 +44,7 @@ SI une phase echoue :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE N/9 ECHEC] <raison>
+[PHASE N/8 ECHEC] <raison>
 [BLOQUE] En attente d'instruction du dev...
 ════════════════════════════════════════════════════
 ```
@@ -54,17 +54,26 @@ SI une phase echoue :
 - NE JAMAIS sauter une phase (meme si elle semble inutile → afficher le checkpoint avec explication)
 - NE JAMAIS fusionner 2 phases en 1 seule etape
 - NE JAMAIS commencer la phase suivante SANS avoir affiche le checkpoint de la phase courante
-- NE JAMAIS generer du code (PHASE 5) sans avoir termine PHASE 3 (plan valide) ET PHASE 4 (analyse terrain)
+- NE JAMAIS generer du code (PHASE 4) sans avoir termine PHASE 3 (plan complet valide avec terrain analyse)
 
-### Ordre des phases (IMMUABLE, 9 phases entieres)
+### Regle 4 : Plan presente UNIQUEMENT quand l'agent est sur a 100%
+
+- L'agent NE DOIT PAS presenter le plan au dev tant que TOUTES les analyses ne sont pas terminees
+- L'analyse du terrain (code existant, zones interdites, fragiles) est faite AVANT la presentation du plan
+- La consultation ENR est faite AVANT la presentation du plan
+- Le plan presente au dev est COMPLET et DEFINITIF : il inclut le rapport de terrain, l'avis ENR, les fichiers concernes, le perimetre autorise
+- Le dev n'a qu'UNE SEULE validation a faire : le plan complet. Pas de validation intermediaire.
+
+### Ordre des phases (IMMUABLE, 8 phases entieres)
 
 ```
-PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8 → PHASE 9
-GIT PULL   PRE-      ANALYSE   ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-
-           FLIGHT    + PLAN    CRITIQUE  TION      TION      TION +    FINAL     SON
-                     + VALID.  TERRAIN             (agents   APPREN-
-                     DEV                           + skills  TISSAGE
-                                                   + build)
+PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8
+GIT PULL   PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-
+           FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON
+                     + TERRAIN            (agents   APPREN-
+                     + PLAN              + skills   TISSAGE
+                     + VALID.            + build)
+                     DEV
 ```
 
 ---
@@ -195,7 +204,7 @@ L'agent ne fait AUCUNE autre operation git. Le dev gere le reste.
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 1/9 OK] Code synchronise sur <branch>
+[PHASE 1/8 OK] Code synchronise sur <branch>
   Submodule modules/axenr : pulled OK (axenr-app uniquement)
   Repo parent : pulled OK
 >> PHASE 2 : PRE-FLIGHT...
@@ -233,22 +242,30 @@ L'agent ne fait AUCUNE autre operation git. Le dev gere le reste.
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 2/9 OK] Contexte charge
+[PHASE 2/8 OK] Contexte charge
   Lecons pertinentes : <N>
   Versions : AOP <version>, AOS <version>
   Cles i18n existantes : <N>
   Code reutilisable identifie : <N> elements
->> PHASE 3 : ANALYSE + PLAN...
+>> PHASE 3 : ANALYSE COMPLETE + PLAN...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 3 : ANALYSE + PLAN + VALIDATION DEV
+## PHASE 3 : ANALYSE COMPLETE + TERRAIN + PLAN + VALIDATION DEV
 
 > **GATE** : PHASE_COMPLETED == 2
 
-**ENFORCEMENT** : Le dev DOIT valider le plan AVANT toute generation de code. NE JAMAIS passer a PHASE 4 sans confirmation EXPLICITE du dev. Le mot "ok", "oui", "go", "valide" ou equivalent DOIT apparaitre dans la reponse du dev.
+**ENFORCEMENT CRITIQUE** : Cette phase regroupe TOUTE l'analyse. L'agent NE PRESENTE LE PLAN au dev que lorsqu'il est SUR A 100% de ce qu'il propose. Cela signifie :
+- L'analyse du ticket est terminee
+- La consultation ENR est terminee (si applicable)
+- L'analyse du terrain (code existant) est terminee
+- Le rapport de terrain est produit
+- Le perimetre est defini avec precision
+- TOUTES les informations sont reunies dans UN SEUL plan complet
+
+Le dev ne voit qu'UN SEUL livrable : le plan complet avec le terrain analyse. Il n'y a qu'UNE SEULE validation a faire.
 
 ### Etape 3.1 : Analyse du ticket
 
@@ -304,17 +321,91 @@ Agent tool:
 
 SI aucun mot-cle ENR detecte → sauter cette etape.
 
-### Etape 3.3 : Presentation du plan au dev
+### Etape 3.3 : Analyse critique du code existant (TERRAIN)
 
-L'agent DOIT presenter ce plan et ATTENDRE la confirmation :
+CRITICAL : Cette etape est OBLIGATOIRE. Elle se fait AVANT la presentation du plan pour que le plan soit fonde sur une connaissance reelle du terrain.
+
+**3.3.1 : Identifier les fichiers a analyser**
+
+Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
+Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
+
+**3.3.2 : Appeler l'agent code-analyzer (SCOPE TICKET UNIQUEMENT)**
+
+L'agent DOIT utiliser le **Agent tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse.
+
+CRITICAL : L'analyse porte UNIQUEMENT sur les fichiers identifies en 3.3.1.
+NE JAMAIS analyser tout le code du projet. NE JAMAIS scanner des fichiers non lies au ticket.
 
 ```
-## PLAN - Ticket #<numero> : <titre>
+Agent tool:
+  subagent_type: "axelor:code-analyzer"
+  description: "Analyze existing code for ticket #<numero>"
+  prompt: "Analyse UNIQUEMENT les fichiers suivants en lien avec le ticket #<numero> (<titre>).
+    NE PAS scanner d'autres fichiers.
+    Fichiers a analyser : <liste EXACTE des chemins complets>.
+    Pour chaque fichier, analyse uniquement les zones qui seront impactees par le ticket.
+    Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW.
+    Le rapport doit etre CONCIS et ACTIONNABLE."
+```
+
+SI aucun fichier existant a analyser (tout est nouveau) → noter "creation uniquement" et continuer.
+
+**3.3.3 : Extraire les points critiques du rapport**
+
+A partir du rapport du code-analyzer, extraire :
+- Issues CRITICAL → **ZONES INTERDITES** : ne pas toucher ces lignes
+- Issues HIGH → **ZONES FRAGILES** : prudence maximale
+- Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
+- Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
+
+**3.3.4 : Produire le RAPPORT DE TERRAIN**
+
+```
+## RAPPORT DE TERRAIN - Analyse pre-generation
+
+### ZONES INTERDITES (ne pas toucher)
+- <fichier>:<lignes> → CRITICAL: <description> → NE PAS MODIFIER
+
+### ZONES FRAGILES (prudence)
+- <Service.java> → methode X() appellee par Y et Z → garder la signature intacte
+
+### POINTS D'ATTENTION
+- Pattern observe : <pattern> → le respecter dans le code genere
+- Convention locale : <convention> → s'y conformer
+
+### PERIMETRE AUTORISE
+- Fichiers a creer : <liste>
+- Fichiers a modifier : <liste avec sections precises>
+- Fichiers a NE PAS TOUCHER : <liste>
+```
+
+SI l'analyse est impossible → signaler dans le plan et proposer de continuer sans analyse.
+
+### Etape 3.4 : Presentation du plan COMPLET au dev
+
+CRITICAL : A ce stade, l'agent a TOUTES les informations. Le plan est DEFINITIF et inclut le terrain analyse. L'agent DOIT presenter ce plan et ATTENDRE la confirmation :
+
+```
+## PLAN COMPLET - Ticket #<numero> : <titre>
 
 ### Contexte
 - Projet : <projet> (branche <branche>)
 - Type : <domain|view|java|mobile|mix>
 - Versions : AOP <version>, AOS <version>, Module <module> <version>
+
+### Analyse du terrain
+| Zone | Type | Detail |
+|------|------|--------|
+| <fichier>:<lignes> | INTERDITE | <raison - ne pas toucher> |
+| <fichier>:<methode> | FRAGILE | <raison - garder signature> |
+| <convention> | ATTENTION | <pattern a respecter> |
+(OU : "Creation uniquement - aucun fichier existant a analyser")
+
+### Perimetre autorise
+- Fichiers a creer : <liste>
+- Fichiers a modifier : <liste avec sections precises>
+- Fichiers a NE PAS TOUCHER : <liste>
 
 ### Ce que je vais faire
 1. <action 1> - <fichier concerne>
@@ -342,7 +433,7 @@ L'agent DOIT presenter ce plan et ATTENDRE la confirmation :
 - <question si applicable>
 ```
 
-### Etape 3.4 : Attendre la confirmation
+### Etape 3.5 : Attendre la confirmation
 
 - ATTENDRE que le dev reponde OK / confirme / valide
 - SI le dev demande des modifications → ajuster et re-presenter
@@ -355,123 +446,33 @@ L'agent DOIT presenter ce plan et ATTENDRE la confirmation :
 - [ ] Fichiers a creer/modifier listes
 - [ ] Code reutilisable identifie
 - [ ] Consultant ENR consulte (si mots-cles ENR detectes)
-- [ ] Plan presente au dev
+- [ ] Terrain analyse : code-analyzer appele sur les fichiers du scope ticket
+- [ ] Rapport de terrain produit avec zones interdites, fragiles, perimetre autorise
+- [ ] Plan COMPLET (incluant terrain) presente au dev
 - [ ] Confirmation EXPLICITE du dev recue
 
 ### Checkpoint
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 3/9 OK] Plan valide par le dev
+[PHASE 3/8 OK] Plan complet valide par le dev
   Type : <type>
   Fichiers : <N> a creer, <N> a modifier
   Code reutilise : <N> elements
+  Terrain : <N> zones interdites, <N> zones fragiles
   Consultant ENR : <VALIDE/CHALLENGE/NON APPLICABLE>
->> PHASE 4 : ANALYSE CRITIQUE TERRAIN...
+>> PHASE 4 : GENERATION...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 4 : ANALYSE CRITIQUE DU CODE EXISTANT
+## PHASE 4 : GENERATION
 
-> **GATE** : PHASE_COMPLETED == 3 (plan valide par le dev)
-
-**ENFORCEMENT** : Cette phase est une PHASE ENTIERE, pas une sous-etape. Elle a le meme poids que toutes les autres. NE PAS la traiter comme optionnelle. NE PAS la fusionner avec PHASE 3 ou PHASE 5. L'agent NE PEUT PAS generer de code (PHASE 5) sans avoir termine cette phase.
-
-### Etape 4.1 : Identifier les fichiers a analyser
-
-Lister TOUS les fichiers existants du projet qui seront modifies ou etendus par le ticket.
-Ne PAS inclure les fichiers a creer (ils n'existent pas encore).
-
-### Etape 4.2 : Appeler l'agent code-analyzer (SCOPE TICKET UNIQUEMENT)
-
-L'agent DOIT utiliser le **Agent tool** avec `subagent_type: "axelor:code-analyzer"` pour lancer l'analyse.
-
-CRITICAL : L'analyse porte UNIQUEMENT sur les fichiers identifies a l'etape 4.1.
-NE JAMAIS analyser tout le code du projet. NE JAMAIS scanner des fichiers non lies au ticket.
-
-```
-Agent tool:
-  subagent_type: "axelor:code-analyzer"
-  description: "Analyze existing code for ticket #<numero>"
-  prompt: "Analyse UNIQUEMENT les fichiers suivants en lien avec le ticket #<numero> (<titre>).
-    NE PAS scanner d'autres fichiers.
-    Fichiers a analyser : <liste EXACTE des chemins complets>.
-    Pour chaque fichier, analyse uniquement les zones qui seront impactees par le ticket.
-    Genere un rapport structure avec les severites CRITICAL, HIGH, MEDIUM, LOW.
-    Le rapport doit etre CONCIS et ACTIONNABLE."
-```
-
-SI aucun fichier existant a analyser (tout est nouveau) → continuer avec le checkpoint ci-dessous en mentionnant "creation uniquement".
-
-### Etape 4.3 : Extraire les points critiques du rapport
-
-A partir du rapport du code-analyzer, extraire :
-- Issues CRITICAL → **ZONES INTERDITES** : ne pas toucher ces lignes
-- Issues HIGH → **ZONES FRAGILES** : prudence maximale
-- Bad practices existantes → ne pas les reproduire, ne pas les corriger non plus (hors scope)
-- Dependencies critiques → code appele par d'autres modules, ne pas casser les signatures
-
-### Etape 4.4 : Produire le RAPPORT DE TERRAIN
-
-```
-## RAPPORT DE TERRAIN - Analyse pre-generation
-
-### ZONES INTERDITES (ne pas toucher)
-- <fichier>:<lignes> → CRITICAL: <description> → NE PAS MODIFIER
-
-### ZONES FRAGILES (prudence)
-- <Service.java> → methode X() appellee par Y et Z → garder la signature intacte
-
-### POINTS D'ATTENTION
-- Pattern observe : <pattern> → le respecter dans le code genere
-- Convention locale : <convention> → s'y conformer
-
-### PERIMETRE AUTORISE
-- Fichiers a creer : <liste>
-- Fichiers a modifier : <liste avec sections precises>
-- Fichiers a NE PAS TOUCHER : <liste>
-```
-
-### Etape 4.5 : Presenter le rapport au dev pour validation
-
-Presenter le rapport et attendre la validation du perimetre.
-Verrouiller : ce rapport devient la contrainte pour TOUTES les phases suivantes.
-
-SI l'analyse est impossible → signaler au dev et demander s'il veut continuer sans analyse.
-
-### Exit conditions
-
-- [ ] Fichiers existants a analyser identifies (ou "creation uniquement" confirme)
-- [ ] code-analyzer appele sur les fichiers du scope ticket
-- [ ] Rapport de terrain produit avec zones interdites, fragiles, perimetre autorise
-- [ ] Rapport presente au dev
-- [ ] Perimetre valide par le dev (ou "creation uniquement" confirme)
-
-### Checkpoint
-
-```
-════════════════════════════════════════════════════
-[PHASE 4/9 OK] Terrain analyse
-  Zones interdites : <N>
-  Zones fragiles : <N>
-  Perimetre autorise : <N> fichiers
-  Rapport valide par le dev
->> PHASE 5 : GENERATION...
-════════════════════════════════════════════════════
-```
-
----
-
-## PHASE 5 : GENERATION
-
-> **GATE** : PHASE_COMPLETED == 4 (terrain analyse ET valide)
->
-> **DOUBLE GATE** : SI PHASE 3 (plan) OU PHASE 4 (terrain) n'est pas completee → STOP IMMEDIAT
+> **GATE** : PHASE_COMPLETED == 3 (plan complet valide avec terrain analyse)
 
 **ENFORCEMENT** : AVANT de generer la moindre ligne de code, VERIFIER :
-1. Le RAPPORT DE TERRAIN de PHASE 4 est charge → respecter zones interdites et fragiles
+1. Le RAPPORT DE TERRAIN de PHASE 3 est charge → respecter zones interdites et fragiles
 2. Les LESSONS-LEARNED.md de PHASE 2 sont chargees → appliquer les lecons pertinentes pendant la generation
 3. Le PLAN de PHASE 3 est charge → suivre exactement ce qui a ete valide
 
@@ -539,24 +540,24 @@ SI l'analyse est impossible → signaler au dev et demander s'il veut continuer 
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 5/9 OK] Code genere
+[PHASE 4/8 OK] Code genere
   Fichiers crees : <liste>
   Fichiers modifies : <liste>
   Agents utilises : <liste>
   Perimetre respecte : OUI
->> PHASE 6 : VALIDATION...
+>> PHASE 5 : VALIDATION...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 6 : VALIDATION
+## PHASE 5 : VALIDATION
 
-> **GATE** : PHASE_COMPLETED == 5
+> **GATE** : PHASE_COMPLETED == 4
 
 **ENFORCEMENT** : 3 etapes OBLIGATOIRES dans cet ordre exact. Aucune etape ne peut etre sautee ou reordonnee. Les agents partenaire sont appeles EN PREMIER, leurs resultats alimentent les skills AxENR.
 
-### Etape 6.1 : Charger les lecons (OBLIGATOIRE, AVANT toute validation)
+### Etape 5.1 : Charger les lecons (OBLIGATOIRE, AVANT toute validation)
 
 ```
 1. Lire LESSONS-LEARNED.md
@@ -569,7 +570,7 @@ SI l'analyse est impossible → signaler au dev et demander s'il veut continuer 
    - 3+ occurrences ET promu → CRITICAL (regle permanente)
 ```
 
-### Etape 6.2 : Appeler les agents de validation (OBLIGATOIRE, dans cet ordre)
+### Etape 5.2 : Appeler les agents de validation (OBLIGATOIRE, dans cet ordre)
 
 **Etape A : Agents partenaire Axelor (OBLIGATOIRE)**
 
@@ -584,7 +585,7 @@ Pour axenr-app :
 | 5 | **code-reviewer** | TOUJOURS | OUI |
 | 6 | **code-analyzer** | UNIQUEMENT sur les fichiers crees/modifies par le ticket | OUI |
 
-CRITICAL (code-analyzer PHASE 6) : Le code-analyzer ne doit analyser QUE les fichiers crees ou modifies par le ticket (liste de PHASE 5). NE PAS analyser tout le projet. Le prompt DOIT lister les fichiers exacts.
+CRITICAL (code-analyzer PHASE 5) : Le code-analyzer ne doit analyser QUE les fichiers crees ou modifies par le ticket (liste de PHASE 4). NE PAS analyser tout le projet. Le prompt DOIT lister les fichiers exacts.
 
 Pour axenr-mobile :
 
@@ -613,7 +614,7 @@ Collecter TOUTES les violations des agents partenaire. Ne pas les ignorer.
 5. Resultat = liste unifiee de TOUTES les violations
 ```
 
-### Etape 6.3 : Build de verification (OBLIGATOIRE)
+### Etape 5.3 : Build de verification (OBLIGATOIRE)
 
 ```
 axenr-app :    ./gradlew build
@@ -622,7 +623,7 @@ axenr-mobile : yarn build && yarn lint
 
 ### Seuils et regles
 
-- SI le score d'un skill est < 70 → les violations doivent etre corrigees en PHASE 7
+- SI le score d'un skill est < 70 → les violations doivent etre corrigees en PHASE 6
 - Les violations CRITICAL doivent TOUTES etre resolues, sans exception
 - Les violations HIGH doivent etre resolues si possible (sauf justification)
 - Les violations MEDIUM et LOW sont des recommandations
@@ -639,23 +640,23 @@ axenr-mobile : yarn build && yarn lint
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 6/9 OK] Validation effectuee
+[PHASE 5/8 OK] Validation effectuee
   Agents appeles : <liste>
   Violations CRITICAL : <N>
   Violations HIGH : <N>
   Violations MEDIUM/LOW : <N>
   Build verification : OK/KO
->> PHASE 7 : CORRECTION + APPRENTISSAGE...
+>> PHASE 6 : CORRECTION + APPRENTISSAGE...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 7 : CORRECTION + APPRENTISSAGE (max 3 iterations)
+## PHASE 6 : CORRECTION + APPRENTISSAGE (max 3 iterations)
 
-> **GATE** : PHASE_COMPLETED == 6
+> **GATE** : PHASE_COMPLETED == 5
 
-**ENFORCEMENT** : Chaque violation CRITICAL ou HIGH doit etre traitee individuellement : analyser, apprendre, corriger, promouvoir. SI 0 CRITICAL et 0 HIGH → afficher le checkpoint directement et passer a PHASE 8.
+**ENFORCEMENT** : Chaque violation CRITICAL ou HIGH doit etre traitee individuellement : analyser, apprendre, corriger, promouvoir. SI 0 CRITICAL et 0 HIGH → afficher le checkpoint directement et passer a PHASE 7.
 
 ### Boucle de correction (par iteration)
 
@@ -689,7 +690,7 @@ Pour chaque issue CRITICAL ou HIGH :
 3. **Appliquer le fix** dans le code du projet
 4. **Appeler knowledge-updater** :
    - SI une lecon atteint 3 occurrences → promouvoir dans CLAUDE.md du marketplace
-5. **Re-lancer PHASE 6** (validation complete)
+5. **Re-lancer PHASE 5** (validation complete)
 
 SI apres 3 iterations il reste des CRITICAL → STOP avec rapport d'erreur detaille.
 
@@ -709,7 +710,7 @@ SI apres 3 iterations il reste des CRITICAL → STOP avec rapport d'erreur detai
   code-analyzer      java-style          updater
   naming-checker     naming-checker         |
     |                  |                    |
-    └──── violations merge (PHASE 6) ──────┘
+    └──── violations merge (PHASE 5) ──────┘
 ```
 
 ### Exit conditions
@@ -724,20 +725,20 @@ SI apres 3 iterations il reste des CRITICAL → STOP avec rapport d'erreur detai
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 7/9 OK] Corrections appliquees
+[PHASE 6/8 OK] Corrections appliquees
   Iterations : <N>/3
   CRITICAL restantes : 0
   Lecons enregistrees : <N>
   Lecons promues : <N>
->> PHASE 8 : BUILD FINAL...
+>> PHASE 7 : BUILD FINAL...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 8 : BUILD FINAL
+## PHASE 7 : BUILD FINAL
 
-> **GATE** : PHASE_COMPLETED == 7
+> **GATE** : PHASE_COMPLETED == 6
 
 **ENFORCEMENT** : Build COMPLET du projet avec TOUTES les etapes Gradle/Yarn. Pas de build partiel. La commande exacte doit etre respectee (casse comprise).
 
@@ -757,7 +758,7 @@ SI le build echoue :
 2. Verifier si l'erreur est liee a une incompatibilite de version (libs.versions.toml)
 3. Appeler error-learner pour enregistrer la lecon
 4. Appliquer le fix
-5. Re-lancer le build (compteur partage avec PHASE 7, max 3 total)
+5. Re-lancer le build (compteur partage avec PHASE 6, max 3 total)
 
 ### Exit conditions
 
@@ -769,18 +770,18 @@ SI le build echoue :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 8/9 OK] Build reussi
+[PHASE 7/8 OK] Build reussi
   Commande : <commande executee>
   Resultat : BUILD SUCCESSFUL
->> PHASE 9 : LIVRAISON...
+>> PHASE 8 : LIVRAISON...
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## PHASE 9 : LIVRAISON
+## PHASE 8 : LIVRAISON
 
-> **GATE** : PHASE_COMPLETED == 8
+> **GATE** : PHASE_COMPLETED == 7
 
 **ENFORCEMENT** : Produire le rapport final COMPLET. Ne PAS commit, ne PAS push, ne PAS creer de branche. Le dev decide de la suite.
 
@@ -809,7 +810,7 @@ SI le build echoue :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 9/9 OK] Livraison complete
+[PHASE 8/8 OK] Livraison complete
   Fichiers modifies : <N>
   Test plan : genere
   Build : SUCCESSFUL
@@ -820,27 +821,29 @@ SI le build echoue :
 
 ---
 
-## CHECKLIST COMPLETE (9 phases)
+## CHECKLIST COMPLETE (8 phases)
 
 ```
 [ ] PHASE 1 : GIT PULL           → Synchroniser le code (2 repos pour axenr-app)
 [ ] PHASE 2 : PRE-FLIGHT         → Charger contexte (lecons, versions, i18n, code reutilisable)
-[ ] PHASE 3 : ANALYSE + PLAN     → Analyser + presenter plan + ATTENDRE validation dev
-[ ] PHASE 4 : ANALYSE CRITIQUE   → code-analyzer sur code existant + rapport de terrain
-[ ] PHASE 5 : GENERATION         → Generer code dans le perimetre autorise uniquement
-[ ] PHASE 6 : VALIDATION         → Agents partenaire + skills AxENR + build verification
-[ ] PHASE 7 : CORRECTION         → Fix CRITICAL/HIGH + error-learner + knowledge-updater
-[ ] PHASE 8 : BUILD FINAL        → Build complet (./gradlew clean generateCode copyWebapp build)
-[ ] PHASE 9 : LIVRAISON          → Test plan + rapport final + compatibilite versions
+[ ] PHASE 3 : ANALYSE COMPLETE   → Ticket + ENR + Terrain + Plan complet → ATTENDRE validation dev
+[ ] PHASE 4 : GENERATION         → Generer code dans le perimetre autorise uniquement
+[ ] PHASE 5 : VALIDATION         → Agents partenaire + skills AxENR + build verification
+[ ] PHASE 6 : CORRECTION         → Fix CRITICAL/HIGH + error-learner + knowledge-updater
+[ ] PHASE 7 : BUILD FINAL        → Build complet (./gradlew clean generateCode copyWebapp build)
+[ ] PHASE 8 : LIVRAISON          → Test plan + rapport final + compatibilite versions
 ```
 
 ---
 
 ## TOUJOURS
 
-- Executer les 9 phases dans l'ordre, sans en sauter aucune
+- Executer les 8 phases dans l'ordre, sans en sauter aucune
 - Afficher le checkpoint avec les barres ═══ apres CHAQUE phase
 - Pour axenr-app : faire les 2 git pull (submodule modules/axenr PUIS parent)
+- Analyser le terrain (code existant) AVANT de presenter le plan au dev
+- Ne presenter le plan au dev QUE quand toutes les analyses sont terminees (100% de certitude)
+- Inclure le rapport de terrain DANS le plan presente au dev (pas de validation separee)
 - Lire LESSONS-LEARNED.md AVANT de generer du code
 - Lire CLAUDE.md du projet cible AVANT de generer du code
 - Lire gradle.properties et libs.versions.toml AVANT de generer du code
@@ -856,15 +859,14 @@ SI le build echoue :
 - Utiliser les constantes du Repository pour les selections
 - Specifier form-view et grid-view sur les champs relationnels
 - Signaler les risques de montee de version dans le rapport
-- Presenter le rapport de terrain au dev AVANT de coder
 - Respecter les zones interdites et fragiles
 
 ## NE JAMAIS
 
 - Sauter une phase ou fusionner 2 phases en 1 seule etape
 - Passer a la phase suivante sans afficher le checkpoint
-- Generer du code sans plan valide par le dev (PHASE 3)
-- Generer du code sans analyse du terrain (PHASE 4)
+- Presenter le plan au dev AVANT d'avoir analyse le terrain (code existant)
+- Generer du code sans plan complet valide par le dev (PHASE 3)
 - Modifier une zone identifiee comme INTERDITE par l'analyse
 - Supprimer du code existant dans le projet
 - Renommer un element existant (panel, action, champ, variable)
@@ -889,7 +891,7 @@ SI le build echoue :
 ## INTEGRATION
 
 ```
-ticket-solver-agent (GATE SYSTEM)
+ticket-solver-agent (GATE SYSTEM - 8 phases)
 │
 ├── PHASE 1 : GIT PULL
 │   ├── axenr-app : git pull modules/axenr PUIS git pull parent (2 obligatoires)
@@ -901,38 +903,36 @@ ticket-solver-agent (GATE SYSTEM)
 │   ├── Lit libs.versions.toml (AOS, enterprise, addons)
 │   └── Verifie repo git Axelor si disponible
 │
-├── PHASE 3 : ANALYSE + PLAN
-│   ├── Analyse ticket, determine type, liste fichiers
-│   ├── Consultation ERP Consultant ENR (si mots-cles ENR)
-│   ├── Presente plan au dev
-│   └── ATTEND validation explicite du dev ← BLOQUANT
+├── PHASE 3 : ANALYSE COMPLETE + TERRAIN + PLAN (1 seule validation dev)
+│   ├── 3.1 Analyse ticket, determine type, liste fichiers
+│   ├── 3.2 Consultation ERP Consultant ENR (si mots-cles ENR)
+│   ├── 3.3 Analyse terrain : code-analyzer sur fichiers existants
+│   │   ├── Identifie zones interdites (CRITICAL)
+│   │   ├── Identifie zones fragiles (HIGH)
+│   │   └── Produit rapport de terrain avec perimetre autorise
+│   ├── 3.4 Presente plan COMPLET au dev (inclut terrain + ENR + perimetre)
+│   └── 3.5 ATTEND validation explicite du dev ← BLOQUANT (1 seule validation)
 │
-├── PHASE 4 : ANALYSE CRITIQUE TERRAIN
-│   ├── Identifie fichiers existants concernes
-│   ├── Lance code-analyzer (scope ticket uniquement)
-│   ├── Produit RAPPORT DE TERRAIN
-│   └── ATTEND validation du perimetre ← BLOQUANT
-│
-├── PHASE 5 : GENERATION
+├── PHASE 4 : GENERATION
 │   ├── Consulte RAPPORT DE TERRAIN (contrainte)
 │   ├── domain-agent → view-agent → java-agent (axenr-app)
 │   └── Code direct (axenr-mobile)
 │
-├── PHASE 6 : VALIDATION
-│   ├── 6.1 Charge lecons → renforce severites
-│   ├── 6.2 Agents partenaire + Skills AxENR + Merge
-│   └── 6.3 Build de verification
+├── PHASE 5 : VALIDATION
+│   ├── 5.1 Charge lecons → renforce severites
+│   ├── 5.2 Agents partenaire + Skills AxENR + Merge
+│   └── 5.3 Build de verification
 │
-├── PHASE 7 : CORRECTION + APPRENTISSAGE
+├── PHASE 6 : CORRECTION + APPRENTISSAGE
 │   ├── error-learner → ecrit dans LESSONS-LEARNED.md
 │   ├── knowledge-updater → promeut dans CLAUDE.md si 3+ occurrences
-│   └── Re-lance PHASE 6 si corrections (max 3 iterations)
+│   └── Re-lance PHASE 5 si corrections (max 3 iterations)
 │
-├── PHASE 8 : BUILD FINAL
+├── PHASE 7 : BUILD FINAL
 │   ├── axenr-app : ./gradlew clean generateCode copyWebapp build
 │   └── axenr-mobile : yarn build && yarn lint
 │
-└── PHASE 9 : LIVRAISON
+└── PHASE 8 : LIVRAISON
     ├── Test plan (template test-plan-template.md)
     ├── Liste fichiers modifies
     ├── Resume + code reutilise vs cree
@@ -956,7 +956,7 @@ ticket-solver-agent (GATE SYSTEM)
 | Version AOS incompatible | Signaler dans le rapport, proposer alternative |
 | API deprecee detectee | Ne pas utiliser, chercher le remplacement |
 | Zone critique detectee | Marquer comme interdite, contourner |
-| Analyse pre-generation impossible | Signaler au dev, demander s'il veut continuer |
+| Analyse pre-generation impossible | Signaler dans le plan, proposer de continuer |
 | Consultant ENR retourne BLOQUANT | STOP immediat, attendre reformulation |
 | Consultant ENR retourne CHALLENGE | Integrer recommandations, presenter au dev |
 | Consultant ENR non disponible | Signaler, continuer avec prudence |
@@ -978,20 +978,18 @@ PHASE 2 : Lit LESSONS-LEARNED.md → 3 lecons pertinentes
           Lit libs.versions.toml → axelorOpenSuite=8.5.11
           Verifie i18n → "Estimated Power" n'existe pas → OK pour creer
           Cherche code reutilisable → numberOfModules existe deja → reutilise
-PHASE 3 : Presente plan au dev → dev valide OK
-PHASE 4 : Analyse pre-generation
-          Lance axelor:analyze-code sur Opportunity.xml et opportunity-form
-          Rapport de terrain :
+PHASE 3 : Analyse ticket → type domain+view, fichiers Opportunity.xml + vues
+          Analyse terrain → code-analyzer sur Opportunity.xml et opportunity-form
             ZONES INTERDITES : aucune
             ZONES FRAGILES : Opportunity.xml:30-45 (champs standard CRM, ne pas renommer)
             PERIMETRE AUTORISE : ajouter champ estimatedPower dans domain + etendre form/grid
-          Dev valide le perimetre → OK
-PHASE 5 : domain-agent → ajoute estimatedPower (XSD domain-models_7.1.xsd)
+          Presente plan COMPLET (incluant terrain) au dev → dev valide OK
+PHASE 4 : domain-agent → ajoute estimatedPower (XSD domain-models_7.1.xsd)
           view-agent → etend form et grid (XSD object-views_7.1.xsd)
-PHASE 6 : Validation OK (agents + skills)
-PHASE 7 : 0 CRITICAL, 0 HIGH → pas de correction necessaire
-PHASE 8 : Build OK
-PHASE 9 : Rapport :
+PHASE 5 : Validation OK (agents + skills)
+PHASE 6 : 0 CRITICAL, 0 HIGH → pas de correction necessaire
+PHASE 7 : Build OK
+PHASE 8 : Rapport :
           2 fichiers modifies
           Compatibilite : AOP 7.4.7 OK, AOS 8.5.11 OK
           Risque montee version : AUCUN (champ custom, pas d'API AOS utilisee)
@@ -1007,20 +1005,18 @@ PHASE 1 : git pull origin dev (submodule modules/axenr PUIS parent — 2 pulls o
 PHASE 2 : Lit libs.versions.toml → axelor-intervention = 8.5.11
           Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 OK
           Detecte : signature de plan() a change entre 8.4.0 et 8.5.0 → ATTENTION
-PHASE 3 : Presente plan au dev → dev valide OK
-PHASE 4 : Analyse pre-generation
-          Lance axelor:analyze-code sur InterventionService.java existant
-          Rapport de terrain :
+PHASE 3 : Analyse ticket → type java, fichier InterventionService.java
+          Analyse terrain → code-analyzer sur InterventionService.java existant
             ZONES INTERDITES : InterventionService.java:20-35 (methodes appelees par 4 modules)
             ZONES FRAGILES : plan() signature → garder intacte, override uniquement
             POINTS D'ATTENTION : pattern Observer utilise, respecter le meme pattern
             PERIMETRE AUTORISE : creer AxenrInterventionServiceImpl extends InterventionServiceImpl
-          Dev valide le perimetre → OK
-PHASE 5 : java-agent → genere le service override avec la signature 8.5.11
-PHASE 6 : Validation OK
-PHASE 7 : 0 CRITICAL → pas de correction
-PHASE 8 : Build OK
-PHASE 9 : Rapport :
+          Presente plan COMPLET (incluant terrain) au dev → dev valide OK
+PHASE 4 : java-agent → genere le service override avec la signature 8.5.11
+PHASE 5 : Validation OK
+PHASE 6 : 0 CRITICAL → pas de correction
+PHASE 7 : Build OK
+PHASE 8 : Rapport :
           ATTENTION : InterventionService.plan() signature changed in 8.5.0
           Si montee de version future, verifier la compatibilite
 ```
@@ -1035,18 +1031,16 @@ PHASE 1 : git pull origin axenr (1 seul pull pour axenr-mobile)
 PHASE 2 : Lit LESSONS-LEARNED.md
           Cherche composants reutilisables → FilterChip existe dans @axelor/aos-mobile-ui
           Verifie i18n → "Hr_Duration" existe deja → reutilise
-PHASE 3 : Presente plan au dev → dev valide OK
-PHASE 4 : Analyse pre-generation
-          Lance axelor:analyze-code sur TimesheetListScreen.tsx
-          Rapport de terrain :
+PHASE 3 : Analyse ticket → type mobile, fichier TimesheetListScreen.tsx
+          Analyse terrain → code-analyzer sur TimesheetListScreen.tsx
             ZONES INTERDITES : aucune
             ZONES FRAGILES : TimesheetListScreen.tsx:15-30 (header props utilisees par navigation)
             POINTS D'ATTENTION : convention FilterChip pour tous les filtres
             PERIMETRE AUTORISE : ajouter filtre duration dans le composant existant
-          Dev valide → OK
-PHASE 5 : Genere le filtre en reutilisant FilterChip
-PHASE 6 : code-reviewer OK, code-analyzer OK
-PHASE 7 : 0 CRITICAL → pas de correction
-PHASE 8 : yarn build OK, yarn lint OK
-PHASE 9 : 1 fichier modifie, 2 composants reutilises, 0 cles i18n creees
+          Presente plan COMPLET (incluant terrain) au dev → dev valide OK
+PHASE 4 : Genere le filtre en reutilisant FilterChip
+PHASE 5 : code-reviewer OK, code-analyzer OK
+PHASE 6 : 0 CRITICAL → pas de correction
+PHASE 7 : yarn build OK, yarn lint OK
+PHASE 8 : 1 fichier modifie, 2 composants reutilises, 0 cles i18n creees
 ```
