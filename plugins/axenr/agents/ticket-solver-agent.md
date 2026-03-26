@@ -161,52 +161,79 @@ AVANT de generer la moindre ligne de code, l'agent DOIT :
 
 ---
 
-## PHASE 1 : GIT PULL
+## PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
 
 > **GATE** : PHASE_COMPLETED == 0 (demarrage)
 
-**ENFORCEMENT** : AUCUNE autre action avant d'avoir synchronise le code. Pour axenr-app, les DEUX repos (submodule + parent) doivent etre pull. Si un seul est pull, la phase est EN ECHEC.
+**ENFORCEMENT** : AUCUNE autre action avant d'avoir synchronise le code, bumpe la version, et pushe. Pour axenr-app, les DEUX repos (submodule + parent) doivent etre checkout et pull. Si un seul est fait, la phase est EN ECHEC.
 
 ### Actions
 
-**SI projet == axenr-app (2 git pull OBLIGATOIRES, dans cet ordre EXACT) :**
+**SI projet == axenr-app (operations sur les 2 repos, dans cet ordre EXACT) :**
 
 ```bash
-# ETAPE 1 : Pull le submodule EN PREMIER (chemin absolu obligatoire)
-cd <chemin-absolu-projet>/modules/axenr && git pull origin <branche>
+# ETAPE 1 : Checkout + Pull le submodule EN PREMIER (chemin absolu obligatoire)
+cd <chemin-absolu-projet>/modules/axenr && git checkout <branche> && git pull origin <branche>
 
-# ETAPE 2 : Pull le repo parent (chemin absolu obligatoire)
-cd <chemin-absolu-projet> && git pull origin <branche>
+# ETAPE 2 : Checkout + Pull le repo parent (chemin absolu obligatoire)
+cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
+
+# ETAPE 3 : Bump version dans gradle.properties du repo parent
+# Lire la version actuelle (ex: version=2.1.5-SNAPSHOT)
+# Incrementer le patch : 2.1.5-SNAPSHOT → 2.1.6-SNAPSHOT
+# Format OBLIGATOIRE : X.Y.Z-SNAPSHOT (incrementer Z de 1)
+# Modifier le fichier gradle.properties avec la nouvelle version
+
+# ETAPE 4 : Commit + Push le bump de version (sans Co-Authored-By)
+cd <chemin-absolu-projet> && git add gradle.properties
+GIT_COMMITTER_NAME="fbe-axenr" GIT_COMMITTER_EMAIL="f.benomar@erp-axenr.fr" git commit --author="fbe-axenr <f.benomar@erp-axenr.fr>" -m "build: bump project version to <nouvelle-version>"
+git push origin <branche>
 ```
 
-REGLES STRICTES pour axenr-app :
-- Les 2 git pull sont OBLIGATOIRES. SI un seul est fait → PHASE EN ECHEC
+**SI projet == axenr-mobile :**
+
+```bash
+# ETAPE 1 : Checkout + Pull
+cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
+
+# ETAPE 2 : Bump version (package.json ou gradle.properties selon le projet)
+# Incrementer le patch version
+
+# ETAPE 3 : Commit + Push le bump de version (sans Co-Authored-By)
+GIT_COMMITTER_NAME="fbe-axenr" GIT_COMMITTER_EMAIL="f.benomar@erp-axenr.fr" git commit --author="fbe-axenr <f.benomar@erp-axenr.fr>" -m "build: bump project version to <nouvelle-version>"
+git push origin <branche>
+```
+
+REGLES STRICTES :
+- Pour axenr-app : les 2 checkout + pull sont OBLIGATOIRES. SI un seul est fait → PHASE EN ECHEC
 - Ordre : submodule `modules/axenr` EN PREMIER, parent EN SECOND
 - Utiliser des chemins ABSOLUS (jamais `cd ../..`)
 - La branche est la MEME pour le submodule et le parent
-- SI un des 2 pull echoue → STOP, afficher l'erreur, attendre le dev
-
-**SI projet == axenr-mobile (1 seul git pull) :**
-
-```bash
-cd <chemin-absolu-projet> && git pull origin <branche>
-```
-
-L'agent ne fait AUCUNE autre operation git. Le dev gere le reste.
+- SI un checkout ou pull echoue → STOP, afficher l'erreur, attendre le dev
+- Le commit de version bump utilise TOUJOURS `fbe-axenr <f.benomar@erp-axenr.fr>` comme auteur ET committer
+- JAMAIS de Co-Authored-By dans le commit
+- Le push est AUTOMATIQUE apres le commit de version bump
+- Le format du commit est : `build: bump project version to <version>`
 
 ### Exit conditions
 
-- [ ] Code synchronise sur la branche cible
-- [ ] Pour axenr-app : les DEUX git pull ont ete executes avec succes (submodule + parent)
-- [ ] Pour axenr-mobile : le git pull a ete execute avec succes
+- [ ] Branche cible checkout sur tous les repos
+- [ ] Code synchronise sur la branche cible (pull OK)
+- [ ] Pour axenr-app : les DEUX checkout + pull ont ete executes avec succes (submodule + parent)
+- [ ] Pour axenr-mobile : le checkout + pull a ete execute avec succes
+- [ ] Version incrementee dans gradle.properties (patch +1)
+- [ ] Commit de version bump cree (sans Co-Authored-By)
+- [ ] Push effectue avec succes
 
 ### Checkpoint
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 1/8 OK] Code synchronise sur <branch>
-  Submodule modules/axenr : pulled OK (axenr-app uniquement)
-  Repo parent : pulled OK
+[PHASE 1/8 OK] Checkout <branch> + pull + version bump + push
+  Submodule modules/axenr : checkout + pulled OK (axenr-app uniquement)
+  Repo parent : checkout + pulled OK
+  Version : <ancienne-version> → <nouvelle-version>
+  Push : OK
 >> PHASE 2 : PRE-FLIGHT...
 ════════════════════════════════════════════════════
 ```
@@ -783,7 +810,7 @@ SI le build echoue :
 
 > **GATE** : PHASE_COMPLETED == 7
 
-**ENFORCEMENT** : Produire le rapport final COMPLET. Ne PAS commit, ne PAS push, ne PAS creer de branche. Le dev decide de la suite.
+**ENFORCEMENT** : Produire le rapport final COMPLET. Ne PAS commit le code genere, ne PAS push le code genere, ne PAS creer de branche. Le dev decide de la suite. (Note : le seul commit+push autorise est le version bump en PHASE 1)
 
 ### Actions
 
@@ -797,7 +824,7 @@ SI le build echoue :
    - Modules concernes et leurs versions
    - Risques de montee de version
 6. Afficher le tout dans le terminal
-7. Ne PAS commit, ne PAS push, ne PAS creer de branche
+7. Ne PAS commit ni push le code genere (le version bump PHASE 1 est le seul commit+push autorise)
 
 ### Exit conditions
 
@@ -824,7 +851,7 @@ SI le build echoue :
 ## CHECKLIST COMPLETE (8 phases)
 
 ```
-[ ] PHASE 1 : GIT PULL           → Synchroniser le code (2 repos pour axenr-app)
+[ ] PHASE 1 : GIT CHECKOUT+PULL+BUMP → Checkout branche + pull + version bump + push
 [ ] PHASE 2 : PRE-FLIGHT         → Charger contexte (lecons, versions, i18n, code reutilisable)
 [ ] PHASE 3 : ANALYSE COMPLETE   → Ticket + ENR + Terrain + Plan complet → ATTENDRE validation dev
 [ ] PHASE 4 : GENERATION         → Generer code dans le perimetre autorise uniquement
@@ -840,7 +867,10 @@ SI le build echoue :
 
 - Executer les 8 phases dans l'ordre, sans en sauter aucune
 - Afficher le checkpoint avec les barres ═══ apres CHAQUE phase
-- Pour axenr-app : faire les 2 git pull (submodule modules/axenr PUIS parent)
+- Pour axenr-app : checkout + pull les 2 repos (submodule modules/axenr PUIS parent)
+- Faire un git checkout vers la branche specifiee AVANT le pull
+- Bumper la version (patch +1) dans gradle.properties apres le pull
+- Commit + push le bump de version avec fbe-axenr (sans Co-Authored-By)
 - Analyser le terrain (code existant) AVANT de presenter le plan au dev
 - Ne presenter le plan au dev QUE quand toutes les analyses sont terminees (100% de certitude)
 - Inclure le rapport de terrain DANS le plan presente au dev (pas de validation separee)
@@ -872,19 +902,23 @@ SI le build echoue :
 - Renommer un element existant (panel, action, champ, variable)
 - Modifier du code non demande par le ticket
 - Ecrire des commentaires dans le code genere
-- Faire des operations git (sauf le pull initial PHASE 1)
+- Faire des operations git (sauf checkout + pull + commit version bump + push en PHASE 1)
 - Deviner une information manquante au lieu de demander
 - Ecrire des fichiers de lecon dans le projet (toujours dans le marketplace)
 - Utiliser des mots francais dans les noms techniques
 - Ignorer un verdict BLOQUANT du consultant ENR
 - Depasser 3 tentatives de correction
-- Push automatiquement
+- Push automatiquement (sauf le version bump en PHASE 1 qui est autorise)
 - Creer du code quand du code existant peut etre reutilise
 - Creer des cles i18n en doublon
 - Utiliser des API deprecees ou incompatibles avec la version AOS
 - Utiliser un XSD qui ne correspond pas a la version AOP
 - Generer du code junior (verbeux, sur-ingenierie)
-- Pour axenr-app : faire UN SEUL git pull au lieu de 2 (submodule + parent)
+- Pour axenr-app : faire UN SEUL checkout/pull au lieu de 2 (submodule + parent)
+- Mettre un Co-Authored-By dans le commit de version bump
+- Oublier le checkout avant le pull (toujours checkout PUIS pull)
+- Oublier le version bump apres le pull
+- Oublier le push apres le commit de version bump
 
 ---
 
@@ -893,9 +927,11 @@ SI le build echoue :
 ```
 ticket-solver-agent (GATE SYSTEM - 8 phases)
 │
-├── PHASE 1 : GIT PULL
-│   ├── axenr-app : git pull modules/axenr PUIS git pull parent (2 obligatoires)
-│   └── axenr-mobile : git pull (1 seul)
+├── PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
+│   ├── axenr-app : checkout + pull modules/axenr PUIS checkout + pull parent (2 obligatoires)
+│   ├── axenr-mobile : checkout + pull (1 seul)
+│   ├── Version bump : patch +1 dans gradle.properties (X.Y.Z-SNAPSHOT)
+│   └── Commit + push version bump (fbe-axenr, sans Co-Authored-By)
 │
 ├── PHASE 2 : PRE-FLIGHT
 │   ├── Charge lecons + contexte projet + i18n
@@ -960,7 +996,10 @@ ticket-solver-agent (GATE SYSTEM - 8 phases)
 | Consultant ENR retourne BLOQUANT | STOP immediat, attendre reformulation |
 | Consultant ENR retourne CHALLENGE | Integrer recommandations, presenter au dev |
 | Consultant ENR non disponible | Signaler, continuer avec prudence |
-| axenr-app : un seul git pull fait | PHASE 1 EN ECHEC, refaire les 2 pulls |
+| axenr-app : un seul checkout/pull fait | PHASE 1 EN ECHEC, refaire les 2 checkout+pull |
+| Checkout echoue (branche inexistante) | STOP, afficher l'erreur, attendre le dev |
+| Version bump echoue | STOP, afficher l'erreur, attendre le dev |
+| Push echoue (conflit, permission) | STOP, afficher l'erreur, attendre le dev |
 
 ---
 
@@ -972,7 +1011,9 @@ ticket-solver-agent (GATE SYSTEM - 8 phases)
 /axenr:solve-ticket axenr-app wip #750 | Add estimated power field | Add estimatedPower field (decimal, precision 20 scale 2) on Opportunity. Calculated from numberOfModules * 400 / 1000. Visible on form and grid.
 
 L'agent :
-PHASE 1 : git pull origin wip (submodule modules/axenr PUIS parent — 2 pulls obligatoires)
+PHASE 1 : checkout wip + pull origin wip (submodule modules/axenr PUIS parent)
+          version bump : 2.1.5-SNAPSHOT → 2.1.6-SNAPSHOT
+          commit + push version bump (fbe-axenr, sans Co-Authored-By)
 PHASE 2 : Lit LESSONS-LEARNED.md → 3 lecons pertinentes
           Lit gradle.properties → aopVersion=7.4.7
           Lit libs.versions.toml → axelorOpenSuite=8.5.11
@@ -1001,7 +1042,8 @@ PHASE 8 : Rapport :
 /axenr:solve-ticket axenr-app dev #760 | Override intervention planning | Override InterventionService.plan() to add custom logic
 
 L'agent :
-PHASE 1 : git pull origin dev (submodule modules/axenr PUIS parent — 2 pulls obligatoires)
+PHASE 1 : checkout dev + pull origin dev (submodule modules/axenr PUIS parent)
+          version bump + commit + push (fbe-axenr, sans Co-Authored-By)
 PHASE 2 : Lit libs.versions.toml → axelor-intervention = 8.5.11
           Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 OK
           Detecte : signature de plan() a change entre 8.4.0 et 8.5.0 → ATTENTION
@@ -1027,7 +1069,8 @@ PHASE 8 : Rapport :
 /axenr:solve-ticket axenr-mobile axenr #801 | Add timesheet duration filter | Add a filter by duration on TimesheetListScreen
 
 L'agent :
-PHASE 1 : git pull origin axenr (1 seul pull pour axenr-mobile)
+PHASE 1 : checkout axenr + pull origin axenr (1 seul pour axenr-mobile)
+          version bump + commit + push (fbe-axenr, sans Co-Authored-By)
 PHASE 2 : Lit LESSONS-LEARNED.md
           Cherche composants reutilisables → FilterChip existe dans @axelor/aos-mobile-ui
           Verifie i18n → "Hr_Duration" existe deja → reutilise
