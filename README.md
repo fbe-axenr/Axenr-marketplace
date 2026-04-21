@@ -34,7 +34,11 @@ Aller sur l'onglet **Installed** pour confirmer.
 |----------|-------------|
 | `/axenr:solve-ticket` | Resoudre 1 ticket autonomement |
 | `/axenr:solve-batch` | Resoudre 2 tickets en parallele |
-| `/axenr:learn-review` | Auditer et consolider les lecons |
+| `/axenr:review-pr <url\|#N>` | Review PR AxENR (axelor:code-reviewer + checks specifiques AxENR) |
+| `/axenr:doctor` | Audit de sante du marketplace |
+| `/axenr:consolidate-lessons` | Fusionne lecons dupliquees et promeut celles a 3+ occurrences |
+| `/axenr:bump-version` | Bump synchronise marketplace.json + plugin.json |
+| `/axenr:learn-review` | Legacy - utiliser consolidate-lessons |
 
 ## Usage
 
@@ -113,6 +117,35 @@ Agents de validation : `code-reviewer`, `code-analyzer`, `axelor-xml-validator`,
 
 ## Mise a jour
 
+Dans Claude Code :
+
 ```
 /plugin marketplace update fbe-axenr-Axenr-marketplace
+/plugin update axenr@fbe-axenr-Axenr-marketplace
+```
+
+Ou d'un coup :
+
+```
+/plugin update --all
+```
+
+### Auto-release (cote mainteneur)
+
+A chaque push sur `main` avec modifs dans `plugins/axenr/`, le workflow
+`.github/workflows/release.yml` :
+
+1. Detecte le type de bump via conventional commits (`feat`=minor, `fix`=patch, `BREAKING`=major)
+2. Bumpe `marketplace.json` + `plugin.json` en sync
+3. Commit `chore(release): bump axenr plugin to vX.Y.Z`
+4. Tag et publie une GitHub Release
+
+Le workflow `.github/workflows/ci.yml` refuse tout PR qui touche `plugins/axenr/` sans bump.
+
+Bump manuel si besoin :
+
+```
+/axenr:bump-version patch
+# ou en local
+./scripts/bump-version.sh auto
 ```

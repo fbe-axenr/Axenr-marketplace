@@ -1,7 +1,7 @@
 {
   "name": "axenr",
-  "version": "1.5.0",
-  "description": "Self-learning ticket resolution system for AxENR projects with ENR business consultation",
+  "version": "1.11.0",
+  "description": "Self-learning ticket resolution for AxENR with ENR consultation, PR review, curator-model lessons, and dedicated agents for import/export, Word/XDocReport templates, and Superset BI architecture. Multi-client context detection (Planete, Systeko, Emeraude, AxENR, Synambu, Energ-IA, Yooz)",
   "author": {
     "name": "Fadel Benomar",
     "email": "f.benomar@erp-axenr.fr"
@@ -15,6 +15,9 @@
     "self-learning",
     "ticket-solver",
     "enr-consultant",
-    "renewable-energy"
+    "renewable-energy",
+    "pr-reviewer",
+    "code-review",
+    "auto-learning"
   ]
 }
