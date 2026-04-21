@@ -1,6 +1,11 @@
+---
+name: axenr-dev-validator
+description: Validates code against Axelor best practices, AxENR conventions and official Axelor docs. Covers domains, views, actions, Java services/controllers, Guice bindings, translations, extensions, and the 8 AxENR golden rules.
+---
+
 # AxENR Dev Validator
 
-> Validates code against Axelor development best practices, AxENR project conventions, and the official Axelor documentation. Covers domains, views, actions, Java services/controllers, Guice bindings, translations, and extensions.
+> Validates code against Axelor development best practices, AxENR project conventions, and the official Axelor documentation. Covers domains, views, actions, Java services/controllers, Guice bindings, translations, extensions, and the 8 AxENR golden rules.
 
 ## ROLE
 

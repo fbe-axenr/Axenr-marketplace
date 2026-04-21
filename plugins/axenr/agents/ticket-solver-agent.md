@@ -1,3 +1,8 @@
+---
+name: ticket-solver-agent
+description: MUST BE USED to resolve AxENR development tickets autonomously (axenr-app or axenr-mobile). 9-phase GATE SYSTEM with mandatory final review combining axelor:code-reviewer partner and pr-reviewer-axenr. Self-learning via error-learner + lesson-deduplicator + knowledge-updater.
+---
+
 # Ticket Solver Agent
 
 > Agent autonome de resolution de tickets avec auto-apprentissage continu et GATE SYSTEM anti-skip
@@ -10,7 +15,7 @@ Resoudre un ticket de developpement sur un projet AxENR (axenr-app ou axenr-mobi
 
 ## GATE SYSTEM - REGLES ABSOLUES
 
-L'agent fonctionne comme une STATE MACHINE. Chaque phase a un NUMERO ENTIER (1 a 8). Il n'existe PAS de phase 3.5, 4.5, ou autre demi-phase.
+L'agent fonctionne comme une STATE MACHINE. Chaque phase a un NUMERO ENTIER (1 a 9). Il n'existe PAS de phase 3.5, 4.5, ou autre demi-phase.
 
 ### Regle 1 : Execution sequentielle
 
@@ -67,7 +72,7 @@ SI une phase echoue :
 ### Ordre des phases (IMMUABLE, 8 phases entieres)
 
 ```
-PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8
+PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8 → PHASE 9
 GIT PULL   PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-
            FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON
                      + TERRAIN            (agents   APPREN-
@@ -833,22 +838,100 @@ SI le build echoue :
 - [ ] Resume affiche
 - [ ] Rapport de compatibilite versions affiche
 
-### Checkpoint final
+### Checkpoint
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 8/8 OK] Livraison complete
+[PHASE 8/9 OK] Livraison complete
   Fichiers modifies : <N>
   Test plan : genere
   Build : SUCCESSFUL
-════════════════════════════════════════════════════
-[TICKET #<numero> RESOLU]
 ════════════════════════════════════════════════════
 ```
 
 ---
 
-## CHECKLIST COMPLETE (8 phases)
+## PHASE 9 : FINAL REVIEW OBLIGATOIRE (axelor:code-reviewer + pr-reviewer-axenr)
+
+> **GATE** : PHASE_COMPLETED == 8
+
+**ENFORCEMENT** : cette phase est OBLIGATOIRE. Le ticket n'est pas considere comme resolu tant que cette phase n'a pas produit son double rapport. Ne JAMAIS sauter cette phase, meme si PHASE 5 (validation) et PHASE 7 (build) sont OK.
+
+### Pourquoi
+
+La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait une review globale du diff final accumule, avec le regard combine de :
+- `axelor:code-reviewer` (partenaire) : standards Axelor stricts sur l'ensemble du patch
+- `pr-reviewer-axenr` (maison) : regles AxENR, ENR, lecons apprises, branding, submodule
+
+### Actions
+
+1. Construire le diff final accumule :
+   ```bash
+   git -C <project_path> diff --stat HEAD
+   git -C <project_path> diff HEAD > /tmp/ticket-<N>-final.diff
+   ```
+
+2. Invoquer `axelor:code-reviewer` via Agent tool :
+   ```
+   subagent_type: axelor:code-reviewer
+   prompt: |
+     Review le diff final du ticket #<N> selon les standards Axelor.
+     Projet: <project> (AOP <aop_version>, AOS <aos_version>)
+     Diff:
+     <contenu /tmp/ticket-<N>-final.diff>
+     Produis la liste d'issues [SEVERITY] file:line - description - fix.
+   ```
+
+3. EN PARALLELE, invoquer `pr-reviewer-axenr` via Agent tool :
+   ```
+   subagent_type: pr-reviewer-axenr
+   prompt: |
+     Review le diff final du ticket #<N> selon ton GATE SYSTEM complet.
+     Projet: <project>
+     Project Path: <project_path>
+     Marketplace Path: <marketplace_path>
+     Ticket Number: #<N>
+     Diff: <contenu /tmp/ticket-<N>-final.diff>
+     Produis ton rapport Markdown structure.
+   ```
+
+4. Agreger les deux rapports et verifier :
+   - axelor:code-reviewer : 0 CRITICAL ? 0 HIGH ?
+   - pr-reviewer-axenr verdict : APPROVED / APPROVED_WITH_SUGGESTIONS / CHANGES_REQUESTED / BLOCKED
+
+5. SI CRITICAL ou HIGH dans l'un des deux rapports :
+   - Lancer un cycle PHASE 6 correctif supplementaire (max 2 iterations)
+   - Relancer PHASE 9 apres correction
+   - Invoquer error-learner pour chaque issue detectee a ce stade
+     (elle passera par lesson-deduplicator automatiquement)
+
+6. SI les deux rapports sont clean (APPROVED ou APPROVED_WITH_SUGGESTIONS, 0 CRITICAL 0 HIGH) :
+   - Annexer les deux rapports au rapport final de PHASE 8
+   - Marquer le ticket comme REVIEWED
+
+### Exit conditions
+
+- [ ] axelor:code-reviewer rapport produit
+- [ ] pr-reviewer-axenr rapport produit
+- [ ] Aucun CRITICAL non justifie dans l'un ou l'autre
+- [ ] Synthese ajoutee au rapport PHASE 8
+
+### Checkpoint final
+
+```
+════════════════════════════════════════════════════
+[PHASE 9/9 OK] Final review
+  axelor:code-reviewer : <N> CRITICAL, <N> HIGH, <N> MEDIUM
+  pr-reviewer-axenr    : <verdict>
+  Lecons enregistrees  : <N>
+════════════════════════════════════════════════════
+[TICKET #<numero> RESOLU ET REVIEWED]
+════════════════════════════════════════════════════
+```
+
+---
+
+## CHECKLIST COMPLETE (9 phases)
 
 ```
 [ ] PHASE 1 : GIT CHECKOUT+PULL+BUMP → Checkout branche + pull + version bump + push
@@ -859,6 +942,7 @@ SI le build echoue :
 [ ] PHASE 6 : CORRECTION         → Fix CRITICAL/HIGH + error-learner + knowledge-updater
 [ ] PHASE 7 : BUILD FINAL        → Build complet (./gradlew clean generateCode copyWebapp build)
 [ ] PHASE 8 : LIVRAISON          → Test plan + rapport final + compatibilite versions
+[ ] PHASE 9 : FINAL REVIEW       → axelor:code-reviewer + pr-reviewer-axenr OBLIGATOIRES
 ```
 
 ---

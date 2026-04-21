@@ -1,3 +1,8 @@
+---
+name: knowledge-updater
+description: Promeut automatiquement les lecons confirmees (3+ occurrences) dans CLAUDE.md du marketplace. Verifie les doublons et conflits avec les regles existantes avant insertion.
+---
+
 # Knowledge Updater
 
 > Promeut automatiquement les lecons confirmees (3+ occurrences) dans le CLAUDE.md du marketplace

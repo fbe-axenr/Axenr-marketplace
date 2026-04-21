@@ -1,6 +1,11 @@
+---
+name: error-learner
+description: Analyse une erreur, normalise sa signature, delegue a lesson-deduplicator pour eviter les doublons, cree ou incremente la lecon dans LESSONS-LEARNED.md, declenche knowledge-updater si 3+ occurrences.
+---
+
 # Error Learner
 
-> Analyse une erreur, cherche si elle est connue, sinon cree une lecon dans LESSONS-LEARNED.md
+> Analyse une erreur, delegue au lesson-deduplicator pour matching semantique, cree ou incremente une lecon dans LESSONS-LEARNED.md
 
 ## ROLE
 
@@ -16,7 +21,33 @@ Recevoir une erreur (message, fichier, contexte), chercher si un pattern similai
 | error_rule_id | Optionnel : ID de la regle violee (ENR-AP-01, DOM-01, VIEW-01, JAVA-01, etc.) |
 | ticket_number | Le numero du ticket en cours |
 | project | axenr-app ou axenr-mobile |
-| lessons_file_path | Chemin absolu vers LESSONS-LEARNED.md dans le marketplace |
+| marketplace_path | Chemin absolu vers le marketplace |
+
+## CIBLE D'ECRITURE (CURATOR MODEL - Option A)
+
+Par defaut, error-learner ecrit dans le fichier LOCAL du poste courant :
+
+```
+<marketplace_path>/plugins/axenr/docs/lessons/LOCAL-LESSONS-<hostname>.md
+```
+
+Le fichier LOCAL est gitignore. Chaque developpeur accumule ses lecons localement.
+La synchronisation vers le fichier partage `LESSONS-LEARNED.md` passe par `/axenr:sync-lessons`
+qui ouvre une PR reviewable par le curateur.
+
+Si le fichier LOCAL n'existe pas, le creer avec l'entete :
+
+```markdown
+# Local Lessons - <hostname>
+
+> Fichier local, non commite. Accumule les lecons de ce poste uniquement.
+> Synchronise vers LESSONS-LEARNED.md via /axenr:sync-lessons.
+
+## LECONS
+```
+
+Les IDs locaux sont prefixes : `LESSON-LOCAL-NNN` pour eviter la collision avec les
+IDs globaux (`LESSON-NNN`) du fichier partage.
 
 ## OUTPUTS
 
@@ -30,26 +61,54 @@ Recevoir une erreur (message, fichier, contexte), chercher si un pattern similai
 ## LOGIQUE
 
 ```
-1. Lire LESSONS-LEARNED.md
-2. Extraire le PATTERN de l'erreur :
-   - Retirer les noms de fichiers specifiques
-   - Retirer les numeros de ligne
-   - Garder le TYPE d'erreur (ex: "missing @Transactional", "ref without full package")
-3. Chercher dans les lecons existantes si ce PATTERN correspond :
-   - Comparaison par type d'erreur
-   - Comparaison par symptome
-   - Comparaison par source (meme agent/outil)
-4. SI match trouve :
-   - Incrementer le compteur d'occurrences
-   - Ajouter le numero de ticket a la liste
-   - Ajouter la date
-   - Retourner la lecon existante avec son fix
-5. SI pas de match :
-   - Generer un nouveau LESSON-XXX (incrementer le compteur global)
-   - Remplir tous les champs obligatoires
-   - Determiner le fix a partir de l'erreur
-   - Ecrire dans LESSONS-LEARNED.md
-   - Retourner la nouvelle lecon
+0. RESOUDRE les chemins :
+   local_file = <marketplace_path>/plugins/axenr/docs/lessons/LOCAL-LESSONS-<hostname>.md
+   shared_file = <marketplace_path>/plugins/axenr/docs/lessons/LESSONS-LEARNED.md
+   Creer local_file s'il n'existe pas.
+
+1. NORMALISER l'erreur -> signature structuree :
+   - Retirer chemins de fichiers absolus (garder le nom de fichier)
+   - Retirer numeros de ligne (LINE 42 -> LINE N)
+   - Remplacer noms d'entites du ticket par <ENTITY>
+   - Remplacer noms de champs specifiques par <FIELD>
+   - Retirer numeros de ticket
+   - Normaliser casse et espaces
+
+2. DELEGUER au skill lesson-deduplicator CONTRE LES DEUX fichiers :
+   Inputs: error_signature, rule_id, type, source, project,
+           lessons_files: [local_file, shared_file]
+   Output: decision (increment | new | review), match_id, match_scope (local|shared),
+           similarity_score
+
+3. APPLIQUER la decision (ecriture TOUJOURS dans local_file) :
+
+   SI decision == increment ET match_scope == local :
+     - Incrementer Occurrences dans local_file
+     - Ajouter le ticket dans la liste Tickets (union)
+     - Mettre a jour Date
+
+   SI decision == increment ET match_scope == shared :
+     - Ne PAS toucher shared_file directement
+     - Creer/incrementer une entree "mirror" dans local_file qui pointe vers le match :
+       LESSON-LOCAL-NNN (mirror of LESSON-NNN, shared_occurrences+M)
+     - /axenr:sync-lessons propagera l'incrementation au shared
+
+   SI decision == review :
+     - Ecrire en section REVIEW QUEUE de local_file
+       avec top-3 candidates et statut=pending
+     - Retourner pointeur vers REVIEW-LOCAL-YYY
+
+   SI decision == new :
+     - Generer un nouveau LESSON-LOCAL-NNN (compteur specifique au local_file)
+     - Remplir tous les champs obligatoires
+     - Ecrire dans local_file
+
+4. NE PAS declencher knowledge-updater ici.
+   La promotion est deferee jusqu'a /axenr:sync-lessons : si apres merge une lecon
+   atteint 3 occurrences dans shared_file, le hook post-merge ou la prochaine
+   /axenr:consolidate-lessons declenche knowledge-updater.
+
+5. Retourner lesson_id (LESSON-LOCAL-NNN), scope=local, fix suggere.
 ```
 
 ## FORMAT D'UNE LECON

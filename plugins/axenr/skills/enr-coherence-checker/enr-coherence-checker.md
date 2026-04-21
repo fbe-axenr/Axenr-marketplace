@@ -1,3 +1,8 @@
+---
+name: enr-coherence-checker
+description: Validates ENR business coherence - genericity across renewable energy types (PV, IRVE, wind, heat pumps), temporal coherence in commercial lifecycle, reusability of domain logic, and anti-patterns specific to ENR industry.
+---
+
 # ENR Coherence Checker
 
 > Validates ENR business coherence: genericity across all renewable energy types, temporal coherence in the commercial lifecycle, and reusability of domain logic.

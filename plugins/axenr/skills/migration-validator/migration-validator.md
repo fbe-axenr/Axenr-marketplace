@@ -1,3 +1,8 @@
+---
+name: migration-validator
+description: Validates migration scripts, data-init files, and AOS upgrade compatibility. Detects breaking changes between AOS versions by analyzing Axelor git repositories and signature diffs.
+---
+
 # Migration Validator
 
 > Validates migration scripts, data-init files, and AOS upgrade compatibility. Detects breaking changes between AOS versions by analyzing the Axelor git repositories.

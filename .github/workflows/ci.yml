@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  doctor:
+    name: Marketplace Doctor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run marketplace-doctor
+        run: python3 scripts/marketplace-doctor.py
+
+      - name: Validate JSON files
+        run: |
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+          python3 -c "import json; json.load(open('plugins/axenr/.claude-plugin/plugin.json'))"
+
+  version-check:
+    name: Version Bump Required
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if axenr plugin files changed but version not bumped
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          PLUGIN_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- 'plugins/axenr/agents/' 'plugins/axenr/skills/' 'plugins/axenr/commands/' | wc -l)
+          VERSION_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- '.claude-plugin/marketplace.json' 'plugins/axenr/.claude-plugin/plugin.json' | wc -l)
+
+          if [ "$PLUGIN_CHANGED" -gt 0 ] && [ "$VERSION_CHANGED" -eq 0 ]; then
+            echo "ERROR: plugins/axenr/ files changed but marketplace.json/plugin.json version not bumped."
+            echo "Run scripts/bump-version.sh to bump, or /axenr:bump-version in Claude Code."
+            exit 1
+          fi
+
+          echo "OK: version bump check passed."
+
+  lint-markdown:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check no emojis in markdown
+        run: |
+          if python3 -c "
+          import re, sys, pathlib
+          pat = re.compile('[\U0001F300-\U0001F6FF\U0001F900-\U0001F9FF\U0001FA70-\U0001FAFF\U00002600-\U000027BF\U0001F1E0-\U0001F1FF]')
+          found = False
+          for p in pathlib.Path('plugins/axenr').rglob('*.md'):
+              txt = p.read_text(encoding='utf-8')
+              for i, line in enumerate(txt.splitlines(), 1):
+                  if pat.search(line):
+                      print(f'{p}:{i}: emoji detected: {line.strip()}')
+                      found = True
+          sys.exit(1 if found else 0)
+          "; then
+            echo "OK: no emoji in plugin markdown files"
+          else
+            echo "FAIL: emojis detected (AxENR rule: NO EMOJIS)"
+            exit 1
+          fi

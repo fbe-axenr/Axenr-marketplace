@@ -1,3 +1,8 @@
+---
+name: pre-flight-checker
+description: Charge le contexte complet avant generation de code AxENR - lecons pertinentes, regles projet, versions AOP/AOS, cles i18n, code reutilisable. Retourne un objet contexte structure consomme par ticket-solver-agent.
+---
+
 # Pre-Flight Checker
 
 > Charge le contexte complet avant toute generation de code : lecons, regles, versions, i18n, code existant
@@ -37,8 +42,17 @@ Un objet contexte structure contenant :
 ## LOGIQUE
 
 ```
-1. LECONS
-   Lire <marketplace_path>/plugins/axenr/docs/lessons/LESSONS-LEARNED.md
+1. LECONS (SHARED + LOCAL - Curator model Option A)
+   Lire EN UNION :
+   - <marketplace_path>/plugins/axenr/docs/lessons/LESSONS-LEARNED.md (partage, equipe)
+   - <marketplace_path>/plugins/axenr/docs/lessons/LOCAL-LESSONS-<hostname>.md (local)
+
+   Les lecons locales ont IDs "LESSON-LOCAL-NNN" et scope=local.
+   Les lecons partagees ont IDs "LESSON-NNN" et scope=shared.
+
+   En cas de "mirror" (lecon locale pointant vers une partagee),
+   fusionner les Occurrences pour le comptage effectif.
+
    Filtrer les lecons par :
    - projet (axenr-app ou axenr-mobile)
    - type (domain, view, java, mobile, build, version, enr, action, naming, i18n, rest, migration)

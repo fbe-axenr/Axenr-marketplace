@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  auto-bump:
+    name: Auto Version Bump
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'chore(release)')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Configure Git
+        run: |
+          git config user.name "fbe-axenr"
+          git config user.email "f.benomar@erp-axenr.fr"
+
+      - name: Detect plugin changes since last tag
+        id: changes
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+
+          PLUGIN_CHANGED=$(git diff --name-only $RANGE -- \
+            'plugins/axenr/agents/' \
+            'plugins/axenr/skills/' \
+            'plugins/axenr/commands/' \
+            'plugins/axenr/templates/' \
+            | wc -l)
+
+          echo "range=$RANGE" >> $GITHUB_OUTPUT
+          echo "plugin_changed=$PLUGIN_CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        if: steps.changes.outputs.plugin_changed != '0'
+        run: |
+          chmod +x scripts/bump-version.sh
+          ./scripts/bump-version.sh auto
+
+      - name: Commit and tag
+        if: steps.changes.outputs.plugin_changed != '0'
+        run: |
+          NEW_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          git add .claude-plugin/marketplace.json plugins/axenr/.claude-plugin/plugin.json
+          git commit -m "chore(release): bump axenr plugin to v${NEW_VERSION}"
+          git tag -a "v${NEW_VERSION}" -m "v${NEW_VERSION}"
+          git push origin main
+          git push origin "v${NEW_VERSION}"
+
+      - name: Create GitHub Release
+        if: steps.changes.outputs.plugin_changed != '0'
+        run: |
+          NEW_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          LAST_TAG=$(git describe --tags --abbrev=0 "v${NEW_VERSION}^" 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            NOTES=$(git log "${LAST_TAG}..v${NEW_VERSION}" --pretty=format:"- %s (%h)")
+          else
+            NOTES="Initial release"
+          fi
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --notes "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
