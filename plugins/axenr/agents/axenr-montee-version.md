@@ -42,11 +42,28 @@ Points de reference verifies :
 
 | Besoin | Source |
 |--------|--------|
-| Compatibilite AOS <-> AOP <-> modules enterprise/addons | https://version-matcher.axelor.com/ |
+| Compatibilite AOS <-> AOP <-> modules enterprise/addons | `https://version-matcher.axelor.com/api/compatibility/<version-aos-cible>` (API JSON). L'UI `https://version-matcher.axelor.com/` est une SPA que WebFetch ne rend PAS : ne jamais la fetcher, attaquer l'API directement. |
 | Versions disponibles d'un artefact enterprise | `https://repository.axelor.com/nexus/repository/maven-enterprise/com/axelor/apps/enterprise/<artifact>/maven-metadata.xml` (authentifie via axelorMavenUsername/Password) |
 | Versions disponibles d'un artefact core | `https://repository.axelor.com/nexus/repository/maven-public/com/axelor/apps/<artifact>/maven-metadata.xml` |
 | Changelog / release notes AOS | https://github.com/axelor/axelor-open-suite/releases (tag `v<version>`) et fichiers `changelogs/` |
+| Scripts de migration Axelor | Publies INLINE dans le CHANGELOG de chaque release, jamais en fichiers `.sql`. Ne pas perdre de temps a chercher des `.sql` dans le depot AOS. |
 | Diff signatures AOS entre 2 versions | Repos locaux `.axelor/axelor-open-suite` et `.axelor/axelor-open-platform` (via `/axelor:setup`) |
+
+---
+
+# ECONOMIE DE TOKENS (retour d'experience GMAO-52, 286k tokens / 143 outils)
+
+Ces regles ne reduisent PAS la rigueur : elles suppriment du travail jete. Les appliquer avant tout le reste.
+
+1. **Se placer sur la BONNE BASE avant de lire quoi que ce soit.** La branche courante du working tree est souvent en retard de plusieurs patchs. Resoudre puis appliquer les versions contre elle, c'est produire un delta faux qu'il faudra entierement defaire. Toujours partir de `origin/<branche-de-flux>` a jour, dans un worktree dedie (PHASE 0). Cout evite : une resolution + une application + une restauration complete.
+2. **Delta d'abord, detail ensuite.** Comparer table SOURCE (de la bonne base) et reponse version-matcher AVANT toute requete Nexus. N'interroger le Nexus QUE pour les briques dont la version change reellement. Entre deux patchs proches, il arrive qu'AUCUN module enterprise ni addon ne bouge : dans ce cas la PHASE 1 se termine en 1 appel.
+3. **Trier le diff avant de le lire.** Sur un diff AOS, faire `git diff --stat` puis un `grep` cible. Un diff de 121 fichiers domains peut n'etre qu'un remplacement `http://` -> `https://` dans les `schemaLocation` : 0 champ, 0 entite. Si le diff est non substantiel, le declarer SAFE et ne PAS declencher l'analyse fine.
+4. **Ne jamais lire un log en entier.** Sur les logs de build et de boot, travailler par assertions : `grep -icE "exception|error|severe"`, `grep -c "Ready to serve"`, `tail -10`. Lire un log complet coute des dizaines de milliers de tokens pour une information binaire.
+5. **Un seul boot.** Booter sur la base configuree du projet, pas sur toutes les bases disponibles. Un boot supplementaire ne se justifie que si l'utilisateur le demande explicitement.
+6. **Verifier le port AVANT de booter.** `lsof -nP -iTCP:8080 -sTCP:LISTEN`. Un Tomcat d'un run precedent qui squatte le port fait echouer le boot sur `Address already in use` apres 3 a 5 minutes d'attente et de logs. Liberer le port ou en choisir un autre AVANT de lancer.
+7. **Ne pas relancer un travail deja fait par l'appelant.** Si l'orchestrateur signale qu'il a lance l'app / libere un port / valide une etape, reprendre son resultat au lieu de recommencer.
+
+GATE ECO : si une action va couter cher (boot, analyse fine, fetch massif), verifier d'abord qu'elle n'est pas rendue inutile par une des 7 regles ci-dessus.
 
 ---
 
@@ -58,25 +75,30 @@ Chaque phase se termine par un GATE. Un GATE non satisfait BLOQUE la phase suiva
 
 1. Recuperer la version AOS cible (parametre unique). Si absente -> DEMANDER.
 2. Detecter le projet (axenr-app / gmao-app) via cwd.
-3. Lire `gradle/libs.versions.toml` -> `axelorOpenSuite` (version source), chaque module enterprise + addon avec sa version.
-4. Lire `gradle.properties` -> `aopVersion` source, `version` du projet.
-5. Etablir la table SOURCE : { AOP, AOS core, chaque enterprise, chaque addon } -> version actuelle.
+3. **SE PLACER SUR LA BASE DE LIVRAISON AVANT DE LIRE LES VERSIONS.** La branche courante du working tree n'est PAS la reference : elle peut etre en retard de plusieurs patchs, et le working tree contient souvent du travail non commite d'un autre ticket.
+   - `git fetch origin`, puis creer la branche de montee depuis `origin/<branche-de-flux>` a jour (`dev` pour gmao-app, voir regles git AxENR pour axenr-app).
+   - Travailler dans un **worktree dedie** (`git worktree add`), jamais dans l'arbre principal : le travail non commite de l'utilisateur reste intact, et il n'y a rien a restaurer en cas d'erreur.
+   - Ne JAMAIS `reset --hard`, `checkout` destructif ou `stash drop` sur l'arbre principal.
+4. Lire `gradle/libs.versions.toml` DU WORKTREE -> `axelorOpenSuite` (version source), chaque module enterprise + addon avec sa version.
+5. Lire `gradle.properties` -> `aopVersion` source, `version` du projet (sert aussi a nommer le repertoire de scripts en PHASE 4).
+6. Etablir la table SOURCE : { AOP, AOS core, chaque enterprise, chaque addon } -> version actuelle.
 
-GATE 0 : version cible connue + table source complete. Sinon STOP.
+GATE 0 : worktree cree depuis la branche de flux a jour + version cible connue + table source lue DANS ce worktree. Sinon STOP.
 
 ## PHASE 1 : RESOLUTION DE COMPATIBILITE
 
 But : pour la version AOS cible, determiner la version COMPATIBLE de chaque brique, sans jamais deviner.
 
-1. Interroger https://version-matcher.axelor.com/ (WebFetch) avec la version AOS cible.
+1. Interroger l'API `https://version-matcher.axelor.com/api/compatibility/<cible>` (1 appel, JSON). Ne pas fetcher l'UI : c'est une SPA vide pour WebFetch.
    - Recuperer : version AOP compatible, versions certifiees de chaque module enterprise, versions des addons.
-2. Pour CHAQUE module enterprise et addon present dans `libs.versions.toml` :
+2. **SHORT-CIRCUIT** : croiser immediatement la reponse avec la table SOURCE. Si aucune brique ne change (cas frequent entre deux patchs proches : seuls AOS et parfois AOP bougent), la PHASE 1 est terminee - aucune requete Nexus a faire. N'interroger le Nexus QUE pour les briques dont la version cible differe de la source.
+3. Pour chaque module enterprise et addon dont la version CHANGE :
    - Comparer la version ACTUELLE a la version compatible annoncee par version-matcher pour la cible AOS.
    - Si version-matcher annonce une version DIFFERENTE -> elle DOIT etre montee (marquer "Mise a jour ? = oui"). C'est le comportement attendu : la montee ne se limite pas a AOS, elle embarque toutes les briques dont version-matcher a change la version compatible.
    - Si version-matcher annonce la MEME version que l'actuelle -> ne pas y toucher (pas de changement gratuit).
    - Croiser la reponse version-matcher avec le `maven-metadata.xml` Nexus pour confirmer que la version compatible EXISTE reellement dans le repo.
    - Si version-matcher indisponible -> fallback : lister les versions disponibles au Nexus et retenir la plus haute compatible avec la branche AOS cible (meme majeure/mineure de reference), en le SIGNALANT explicitement comme "resolu par fallback, a confirmer".
-3. Construire la table CIBLE et le DELTA :
+4. Construire la table CIBLE et le DELTA :
 
 | Brique | Version source | Version cible | Source de la decision | Mise a jour ? |
 |--------|----------------|---------------|-----------------------|---------------|
@@ -91,13 +113,14 @@ GATE 1 : chaque brique a une version cible JUSTIFIEE (source nommee). Aucune lig
 
 But : savoir ce qui change entre source et cible, cible sur ce qu'AxENR/GMAO surcharge.
 
-1. Recuperer les release notes AOS entre `v<source>` et `v<cible>` (GitHub releases + changelogs/).
-2. DELEGUER l'analyse fine des breaking changes a la **skill migration-validator** (mode AOS UPGRADE, `source_version` + `target_version`) :
+1. Recuperer les release notes AOS entre `v<source>` et `v<cible>` (GitHub releases + changelogs/). Les scripts de migration Axelor y sont INLINE, pas en fichiers `.sql` : les extraire de la, ne pas les chercher ailleurs.
+2. **TRIAGE DU DIFF AVANT TOUTE ANALYSE FINE** (regle eco 3). `git diff v<source>..v<cible> --stat` sur `axelor-open-suite`, puis grep cible sur les zones a risque (`<field`, `name=`, `<entity`, signatures Java). Un diff volumineux mais non substantiel (ex : remplacement massif `http://` -> `https://` dans les `schemaLocation` des domains) se declare SAFE en un seul appel. Ne declencher l'etape 3 que si le triage remonte des changements reels.
+3. DELEGUER l'analyse fine des breaking changes a la **skill migration-validator** (mode AOS UPGRADE, `source_version` + `target_version`) :
    - diff domaines (champs supprimes/renommes, entites renommees/supprimees, selections modifiees) ;
    - diff vues (elements renommes que les extensions AxENR/GMAO ciblent en XPath) ;
    - diff Java (methodes supprimees, signatures changees, nouvelles methodes abstraites) ;
    - cross-reference avec le code `fr.axenr` / `fr.gmao`.
-3. FOCUS OBLIGATOIRE - les 3 casses recurrentes de montee de version (voir section dediee plus bas) :
+4. FOCUS OBLIGATOIRE - les 3 casses recurrentes de montee de version (voir section dediee plus bas) :
    - (A) Constructeurs des `*Impl` AOS modifies -> `super(...)` casse dans les surcharges.
    - (B) Entite AOS renommee -> meta orpheline (`meta_action.model`, `meta_view.model`) -> ClassNotFound au boot.
    - (C) Colonne AOS ajoutee non creee sur bases existantes -> "column does not exist" au runtime.
@@ -108,7 +131,7 @@ GATE 2 : liste des breaking changes produite, chacun classe SAFE (aucune referen
 
 But : appliquer les versions cibles de maniere propre et reversible.
 
-1. Creer une branche dediee : `feature/<ticket>-montee-aos-<cible>` (ou `chore/montee-aos-<cible>`), basee sur la branche de flux du projet (voir regles git AxENR).
+1. La branche et le worktree existent deja (PHASE 0) : ne pas les recreer, ne pas rebasculer sur l'arbre principal.
 2. Editer `gradle/libs.versions.toml` :
    - `axelorOpenSuite = "<cible>"` (met a jour tous les modules core d'un coup).
    - Chaque module enterprise/addon dont la table CIBLE indique "Mise a jour ? = oui" DOIT etre modifie (ligne par ligne, version literale). Ne pas en oublier : toute brique dont version-matcher a change la version compatible est montee.
@@ -131,11 +154,19 @@ But : garantir zero regression. Traiter les 3 casses recurrentes dans l'ordre.
    - FIX : script de nettoyage meta idempotent (renommer/supprimer les references a l'ancienne classe) valide par migration-validator (regles MIG, insert-only / pas de DML aveugle sur AOS).
 3. **Colonnes manquantes (casse C - nouveaux champs AOS)** :
    - Diff des colonnes attendues par le code cible vs schema des bases existantes (recette/prod).
-   - FIX : `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` idempotent, versionne, sous `src/main/scripts/V<version>/`, valide par migration-validator.
-4. **Build complet** : `./gradlew clean generateCode copyWebapp build` (ou l'equivalent projet). Doit passer.
-5. **Boot de controle** : si une instance de test jetable est disponible, demarrer et verifier l'absence de ClassNotFound / column-does-not-exist dans les logs de boot. Ne JAMAIS muter une base metier pour ce test (bases jetables uniquement).
+   - FIX : `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` idempotent, valide par migration-validator.
+   - **Emplacement des scripts** : creer un repertoire DEDIE a la montee, `src/main/scripts/V<prochaine-version-projet>/`, numerotation repartant a `01__`. Deduire la version du `version=X.Y.Z-SNAPSHOT` de `gradle.properties` et la CONFIRMER a l'utilisateur. Ne pas empiler les scripts a la suite d'un repertoire de version anterieure deja livree, et ne pas se fier a l'arborescence de l'arbre principal : lire celle de la branche de flux (`git ls-tree -r --name-only origin/<flux> -- src/main/scripts`).
+   - Conserver le prefixe `V` et le format `NN__description.sql` des scripts existants, avec la reference du ticket en en-tete.
+4. **Build complet** : `./gradlew clean generateCode copyWebapp build` (ou l'equivalent projet). Doit passer. Ne PAS lire le log complet : verdict par `grep -icE "error|FAILED"` + statut de sortie.
+5. **Boot de controle** :
+   - AVANT de lancer : verifier que le port est libre (`lsof -nP -iTCP:8080 -sTCP:LISTEN`). Un Tomcat d'un run precedent fait echouer le boot sur `Address already in use` apres plusieurs minutes perdues. Liberer le port ou en choisir un autre.
+   - UN SEUL boot, sur la base configuree du projet (`db.default.url`). Pas de boot supplementaire sur les autres instances sauf demande explicite.
+   - Verdict par assertions sur le log, jamais par lecture integrale : `grep -c "Ready to serve"`, `grep -icE "exception|error|severe"`, `grep -iE "ClassNotFound|column .* does not exist|Address already in use"`, puis un `curl -o /dev/null -w "%{http_code}"` sur l'URL.
+   - Distinguer les erreurs IMPUTABLES a la montee des erreurs PREEXISTANTES (meta laissee par une autre branche, cle d'encryption differente) : les seconds se signalent, ne se corrigent pas ici.
+   - Ne JAMAIS muter une base metier sans accord explicite de l'utilisateur : `ddl=update` modifie le schema. Demander avant, ou utiliser une base jetable.
+   - Couper l'instance en fin de validation et liberer le worktree.
 
-GATE 4 : compileJava vert + build vert + aucun breaking change IMPACT non traite. Sinon STOP (ne pas produire de PR verte trompeuse).
+GATE 4 : compileJava vert + build vert + boot avec 0 erreur imputable a la montee + aucun breaking change IMPACT non traite. Sinon STOP (ne pas produire de PR verte trompeuse).
 
 ## PHASE 5 : COHERENCE PR
 
@@ -154,8 +185,10 @@ GATE 5 : validation migration-validator sans CRITICAL restant + coherence GMAO/A
 But : livrer une montee tracable et validable par tous.
 
 1. Produire la **description de ticket Jira** (structure imposee ci-dessous) : liste des sujets de montee, versions compatibles des modules enterprise, points d'impact dev GMAO/AxENR, checklist de test de non-regression.
-2. Si l'acces Jira est disponible (MCP Atlassian) -> creer/mettre a jour le ticket. Sinon -> livrer la description en Markdown a coller dans Jira.
+2. Si l'acces Jira est disponible (MCP Atlassian) -> creer/mettre a jour le ticket. Sinon -> livrer la description en Markdown a coller dans Jira. Creer le ticket en FIN de workflow, pas au debut : un ticket cree tot devient un dechet a supprimer si le perimetre change.
 3. Commit + PR selon les regles git AxENR (auteur ET committer fbe-axenr, pas de Co-Authored-By, pas de commentaire dans le commit, PR sans body). Le detail va dans le ticket Jira, pas dans le commit.
+4. **Ne commiter QUE les fichiers de la montee** (`gradle.properties`, `gradle/libs.versions.toml`, scripts, correctifs de la montee). `git add` fichier par fichier, jamais `git add .` ni `-A`. Le worktree dedie de la PHASE 0 rend cette separation naturelle.
+5. Si l'orchestrateur impose un ordre (review puis test puis git), le RESPECTER : ne pas commiter avant que les gates demandes soient passes.
 
 GATE 6 : ticket/description Jira complet + PR conforme aux regles. Fin.
 
@@ -241,6 +274,8 @@ Chaque ligne = un point que le testeur doit verifier.
 # REGLES NON NEGOCIABLES
 
 - Un seul parametre d'entree : la version AOS cible. Le reste est resolu, jamais devine.
+- Resoudre et appliquer les versions UNIQUEMENT depuis la branche de flux a jour, dans un worktree dedie. Le working tree de l'utilisateur ne se touche pas.
+- Appliquer les 7 regles de la section ECONOMIE DE TOKENS avant toute action couteuse.
 - Ne jamais monter un module vers une version non certifiee compatible (version-matcher) ET non presente au Nexus.
 - Corriger UNIQUEMENT le code custom (`fr.axenr`/`fr.gmao`), jamais le code AOS.
 - Aucun commentaire dans le code (Java/XML). Aucun emoji nulle part.
