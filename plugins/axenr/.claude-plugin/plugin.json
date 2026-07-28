@@ -1,6 +1,6 @@
 {
   "name": "axenr",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Self-learning ticket resolution for AxENR with ENR consultation, PR review, curator-model lessons, and dedicated agents for import/export, Word/XDocReport templates, and Superset BI architecture. Multi-client context detection (Planete, Systeko, Emeraude, AxENR, Synambu, Energ-IA, Yooz)",
   "author": {
     "name": "Fadel Benomar",
