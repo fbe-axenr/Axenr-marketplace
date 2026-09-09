@@ -1128,7 +1128,8 @@ ticket-solver-agent (GATE SYSTEM - 9 phases)
 | Consultant ENR retourne BLOQUANT | STOP immediat, attendre reformulation |
 | Consultant ENR retourne CHALLENGE | Integrer recommandations, presenter au dev |
 | Consultant ENR non disponible | Signaler, continuer avec prudence |
-| axenr-app : un seul checkout/pull fait | PHASE 1 EN ECHEC, refaire les 2 checkout+pull |
+| axenr-app : sous-module cherche ou synchronise | ERREUR de phase : depot unique, un seul checkout/pull |
+| Code fautif dans le package `fr.gmao` | Livrer dans gmao-app, PAS dans axenr-app |
 | Checkout echoue (branche inexistante) | STOP, afficher l'erreur, attendre le dev |
 | Version bump echoue | STOP, afficher l'erreur, attendre le dev |
 | Push echoue (conflit, permission) | STOP, afficher l'erreur, attendre le dev |
