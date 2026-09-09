@@ -1030,14 +1030,13 @@
 
 ## LIVRAISON
 
-### LESSON-102 : Topologie de la branche de livraison supposee
+### LESSON-102 : Depot de livraison choisi sans identifier le proprietaire du code
 - **Type** : build
 - **Projet** : axenr-app
-- **Erreur** : Livrer via le depot sous-module `axenr` un ticket dont la cible est `axenr-app:wip`, ou lancer un checkout de sous-module sur une branche qui n'en a pas. Sur `wip`, `modules/axenr` est committe en fichiers A PLAT et `.gitmodules` n'existe pas. Une PR sur le sous-module ne remonte pas toute seule sur wip
-- **Correction** : Detecter la topologie AVANT tout checkout : `git ls-tree origin/<branche> .gitmodules`. Sortie vide = fichiers a plat, un seul depot. Travailler dans un `git worktree` isole pour ne pas casser l'arbre principal, editer directement `modules/axenr/...`, committer les fichiers nommement et ouvrir la PR avec `--base wip`
-- **Occurrences** : 2
-- **Tickets** : #1115, #1123
-- **Promu** : false
+- **Erreur** : Livrer via le depot `axenr` (ERP-AxENR/axenr) ou tenter de synchroniser un sous-module. `axenr-app` est un depot UNIQUE : `modules/axenr` y est versionne en fichiers ordinaires sur `dev`, `wip` et `main`, le sous-module ayant ete supprime le 2026-05-16 (commit `cbdcd94`). Une PR sur l'ancien depot ne remonte nulle part. Symetriquement, corriger dans axenr-app du code qui appartient a `fr.gmao` ne produit rien : gmao est la dependance amont `fr.gmao:gmao`, jar produit par le depot gmao-app
+- **Correction** : Un seul checkout, un seul pull, un seul depot, dans un `git worktree` isole. Avant de coder, trancher le proprietaire du code fautif : package `fr.axenr` -> livraison axenr-app ; package `fr.gmao` -> livraison gmao-app, puis remontee par bump de la version gmao dans `gradle/libs.versions.toml` (elle differe par branche : wip 2.5.0-SNAPSHOT, dev 1.0.7-SNAPSHOT, donc la lire et ne pas la supposer). Seules des branches anterieures au 2026-05-16 portent encore un `.gitmodules` : sur celles-la, demander au dev
+- **Occurrences** : 3
+- **Tickets** : #1115, #1123, PE-508
 
 ### LESSON-103 : Fichier i18n CRLF edite avec un outil qui normalise les fins de ligne
 - **Type** : i18n

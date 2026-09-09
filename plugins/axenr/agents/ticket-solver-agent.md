@@ -73,9 +73,9 @@ SI une phase echoue :
 
 ```
 PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8 → PHASE 9
-TOPOLOGIE  PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-   FINAL
-+ GIT      FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON       REVIEW
-PULL                 + TERRAIN           (agents   APPREN-
+GIT        PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-   FINAL
+PULL       FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON       REVIEW
+                     + TERRAIN           (agents   APPREN-
                      + PLAN              + skills  TISSAGE
                      + VALID.            + build)
                      DEV
@@ -186,69 +186,36 @@ AVANT de generer la moindre ligne de code, l'agent DOIT :
 
 ---
 
-## PHASE 1 : DETECTION TOPOLOGIE + GIT CHECKOUT + PULL + VERSION BUMP + PUSH
+## PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
 
 > **GATE** : PHASE_COMPLETED == 0 (demarrage)
 
-**ENFORCEMENT** : AUCUNE autre action avant d'avoir DETECTE la topologie du depot, synchronise le code, bumpe la version, et pushe. La topologie d'axenr-app n'est PAS la meme sur toutes les branches : elle DOIT etre detectee, jamais supposee.
+**ENFORCEMENT** : AUCUNE autre action avant d'avoir synchronise le code, bumpe la version, et pushe.
 
-### ETAPE 0 : Detecter la topologie de la branche cible (OBLIGATOIRE, axenr-app)
+### Topologie reelle d'axenr-app (verifiee le 2026-09-09)
 
-Sur axenr-app, `modules/axenr` est un SOUS-MODULE sur certaines branches (`dev`) et des fichiers A PLAT dans le depot parent sur d'autres, dont `wip` qui est la branche de livraison. Lancer un checkout de sous-module sur une branche a plat echoue, ou pire, livre le code dans le mauvais depot.
+`axenr-app` est un depot UNIQUE. `modules/axenr` y est versionne en fichiers ORDINAIRES : il n'y a NI `.gitmodules`, NI depot sous-module a synchroniser sur `dev`, `wip` et `main`. Le sous-module a ete supprime le 2026-05-16 (commit `cbdcd94 chore: remove axenr submodule`). Un seul checkout, un seul pull, un seul depot.
 
-```bash
-cd <chemin-absolu-projet> && git fetch origin <branche>
-git ls-tree origin/<branche> .gitmodules
-```
+`gmao` n'est pas un sous-module non plus : c'est la dependance AMONT `fr.gmao:gmao`, declaree dans `gradle/libs.versions.toml` et consommee par `modules/axenr/build.gradle` via `api libs.gmao`. Elle est produite par un AUTRE depot (`gmao-app`, ERP-GMAO/axenr-maintxpro) et arrive sous forme de jar. Sa version DIFFERE par branche (wip `2.5.0-SNAPSHOT`, dev `1.0.7-SNAPSHOT`) : lire la valeur de la branche cible, ne jamais la supposer.
 
-- Sortie NON vide -> topologie SOUS-MODULE -> appliquer le MODE A
-- Sortie VIDE -> topologie A PLAT -> appliquer le MODE B
+**Regle de routage, a trancher AVANT de coder** : une correction dans du code `fr.axenr` se livre dans axenr-app ; une correction dans du code `fr.gmao` se livre dans gmao-app et ne remonte dans axenr-app que par un bump de la version gmao. Identifier le package proprietaire du code fautif fait partie de l'analyse.
 
-La topologie detectee est affichee dans le checkpoint. En cas de doute, DEMANDER au dev, ne jamais supposer.
+Seules de vieilles branches anterieures au 2026-05-16 portent encore un `.gitmodules` (`feature/764-gmao-module`, `feature/771-menu-order-fix`, `fix/1059-*`). Si le ticket cible explicitement une de ces branches, DEMANDER au dev, ne pas improviser.
 
-### MODE A : axenr-app, branche a topologie SOUS-MODULE
+### Actions
 
-Les DEUX repos (submodule + parent) doivent etre checkout et pull. Si un seul est fait, la phase est EN ECHEC.
+**SI projet == axenr-app :**
 
 ```bash
-# ETAPE 1 : Checkout + Pull le submodule EN PREMIER (chemin absolu obligatoire)
-cd <chemin-absolu-projet>/modules/axenr && git checkout <branche> && git pull origin <branche>
-
-# ETAPE 2 : Checkout + Pull le repo parent (chemin absolu obligatoire)
+# ETAPE 1 : Checkout + Pull (chemin absolu obligatoire)
 cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
-```
 
-REGLES STRICTES mode A :
-- Les 2 checkout + pull sont OBLIGATOIRES. SI un seul est fait -> PHASE EN ECHEC
-- Ordre : submodule `modules/axenr` EN PREMIER, parent EN SECOND
-- La branche est la MEME pour le submodule et le parent
-
-### MODE B : axenr-app, branche a topologie A PLAT (cas de `wip`)
-
-`modules/axenr` est versionne en fichiers normaux du depot parent : il n'y a ni `.gitmodules`, ni depot sous-module a synchroniser. UN SEUL checkout + pull, sur le parent.
-
-```bash
-# ETAPE 1 : Checkout + Pull le repo parent UNIQUEMENT (chemin absolu obligatoire)
-cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
-```
-
-REGLES STRICTES mode B :
-- UN SEUL checkout + pull (le parent). Chercher un sous-module ici est une ERREUR de phase
-- Les fichiers `modules/axenr/...` sont des fichiers ordinaires du depot parent, ils se modifient et se committent dans le parent
-- Ne JAMAIS committer dans le depot sous-module `axenr` pour un ticket livre sur une branche a plat
-- La livraison se fait par PR sur `axenr-app:<branche>`, JAMAIS via le depot `axenr`
-- Travailler dans un WORKTREE ISOLE (`git worktree add`) pour ne pas casser la copie de travail courante, qui peut etre sur une branche a topologie sous-module
-
-### ETAPES COMMUNES (apres le mode A ou B)
-
-```bash
-# ETAPE 3 : Bump version dans gradle.properties du repo parent
+# ETAPE 2 : Bump version dans gradle.properties
 # Lire la version actuelle (ex: version=2.1.5-SNAPSHOT)
 # Incrementer le patch : 2.1.5-SNAPSHOT -> 2.1.6-SNAPSHOT
 # Format OBLIGATOIRE : X.Y.Z-SNAPSHOT (incrementer Z de 1)
-# Modifier le fichier gradle.properties avec la nouvelle version
 
-# ETAPE 4 : Commit + Push le bump de version (sans Co-Authored-By)
+# ETAPE 3 : Commit + Push le bump de version (sans Co-Authored-By)
 cd <chemin-absolu-projet> && git add gradle.properties
 GIT_COMMITTER_NAME="fbe-axenr" GIT_COMMITTER_EMAIL="f.benomar@erp-axenr.fr" git commit --author="fbe-axenr <f.benomar@erp-axenr.fr>" -m "build: bump project version to <nouvelle-version>"
 git push origin <branche>
@@ -268,8 +235,12 @@ GIT_COMMITTER_NAME="fbe-axenr" GIT_COMMITTER_EMAIL="f.benomar@erp-axenr.fr" git 
 git push origin <branche>
 ```
 
-REGLES STRICTES communes :
-- La topologie est DETECTEE avant tout checkout, jamais supposee
+REGLES STRICTES :
+- UN SEUL checkout + pull. Chercher ou synchroniser un sous-module est une ERREUR de phase
+- Les fichiers `modules/axenr/...` sont des fichiers ordinaires : ils se modifient et se committent dans axenr-app
+- Ne JAMAIS livrer via le depot `axenr` (ERP-AxENR/axenr) : il est hors circuit depuis le 2026-05-16
+- Un besoin qui touche du code `fr.gmao` se livre dans gmao-app, pas ici
+- Travailler dans un WORKTREE ISOLE (`git worktree add`) pour ne pas casser la copie de travail courante
 - Utiliser des chemins ABSOLUS (jamais `cd ../..`)
 - SI un checkout ou pull echoue -> STOP, afficher l'erreur, attendre le dev
 - `git add` par nom de fichier UNIQUEMENT, JAMAIS `git add .` ni `git add -A`
@@ -280,12 +251,11 @@ REGLES STRICTES communes :
 
 ### Exit conditions
 
-- [ ] Topologie de la branche cible detectee via `git ls-tree origin/<branche> .gitmodules` (axenr-app)
-- [ ] Branche cible checkout sur le ou les repos concernes par la topologie
+- [ ] Branche cible checkout sur axenr-app (un seul depot)
 - [ ] Code synchronise sur la branche cible (pull OK)
-- [ ] Mode A : les DEUX checkout + pull ont ete executes avec succes (submodule + parent)
-- [ ] Mode B : le checkout + pull du parent a ete execute, AUCUNE operation sur le depot sous-module
-- [ ] Pour axenr-mobile : le checkout + pull a ete execute avec succes
+- [ ] AUCUNE operation tentee sur un depot sous-module
+- [ ] Depot de livraison tranche (axenr-app pour `fr.axenr`, gmao-app pour `fr.gmao`)
+- [ ] Version gmao de la branche cible relevee dans `gradle/libs.versions.toml`
 - [ ] Version incrementee dans gradle.properties (patch +1)
 - [ ] Commit de version bump cree (sans Co-Authored-By)
 - [ ] Push effectue avec succes
@@ -294,11 +264,10 @@ REGLES STRICTES communes :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 1/9 OK] Topologie + checkout <branch> + pull + version bump + push
-  Topologie detectee : <SOUS-MODULE | A PLAT>
-  Submodule modules/axenr : checkout + pulled OK (mode A uniquement)
-  Repo parent : checkout + pulled OK
-  Version : <ancienne-version> -> <nouvelle-version>
+[PHASE 1/9 OK] Checkout <branch> + pull + version bump + push
+  Depot : axenr-app (depot unique, modules/axenr a plat)
+  Dependance amont : fr.gmao:gmao <version lue dans libs.versions.toml>
+  Version projet : <ancienne-version> -> <nouvelle-version>
   Push : OK
 >> PHASE 2 : PRE-FLIGHT...
 ════════════════════════════════════════════════════
@@ -892,7 +861,7 @@ SI le build echoue :
 6. Afficher le tout dans le terminal
 7. Ne PAS commit ni push le code genere (le version bump PHASE 1 est le seul commit+push autorise)
 8. SI et SEULEMENT SI le dev demande explicitement la PR :
-   - Cibler `axenr-app:<branche>` (jamais le depot sous-module `axenr` sur une branche a plat)
+   - Cibler `axenr-app:<branche>` (jamais le depot `axenr`, hors circuit depuis le 2026-05-16)
    - `git add` par nom de fichier, jamais `-A`
    - Commit `fix(#<ticket>): <description courte>` ou `feat(#<ticket>): ...`, auteur ET committer `fbe-axenr`, sans Co-Authored-By
    - `gh pr create --body ""` : PR SANS body, le detail part dans le ticket Redmine
@@ -927,7 +896,7 @@ SI le build echoue :
 
 La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait une review globale du diff final accumule, avec le regard combine de :
 - `axelor:code-reviewer` (partenaire) : standards Axelor stricts sur l'ensemble du patch
-- `pr-reviewer-axenr` (maison) : regles AxENR, ENR, lecons apprises, branding, submodule
+- `pr-reviewer-axenr` (maison) : regles AxENR, ENR, lecons apprises, branding, depot de livraison
 
 ### Actions
 
@@ -1018,9 +987,8 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 - Executer les 9 phases dans l'ordre, sans en sauter aucune
 - Respecter les regles dures R1 a R13 a chaque phase
 - Afficher le checkpoint avec les barres ═══ apres CHAQUE phase
-- Pour axenr-app : DETECTER la topologie de la branche cible avant tout checkout
-- Mode SOUS-MODULE : checkout + pull les 2 repos (submodule modules/axenr PUIS parent)
-- Mode A PLAT (wip) : checkout + pull le parent UNIQUEMENT, travailler en worktree isole
+- Pour axenr-app : UN SEUL checkout + pull (depot unique, modules/axenr a plat), en worktree isole
+- Trancher le depot de livraison avant de coder : `fr.axenr` -> axenr-app, `fr.gmao` -> gmao-app
 - Faire un git checkout vers la branche specifiee AVANT le pull
 - Bumper la version (patch +1) dans gradle.properties apres le pull
 - Commit + push le bump de version avec fbe-axenr (sans Co-Authored-By)
@@ -1075,9 +1043,9 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 - Utiliser des API deprecees ou incompatibles avec la version AOS
 - Utiliser un XSD qui ne correspond pas a la version AOP
 - Generer du code junior (verbeux, sur-ingenierie)
-- Supposer la topologie d'axenr-app sans l'avoir detectee sur la branche cible
-- Mode SOUS-MODULE : faire UN SEUL checkout/pull au lieu de 2 (submodule + parent)
-- Mode A PLAT : chercher un sous-module, ou committer dans le depot axenr pour un ticket livre sur wip
+- Chercher, synchroniser ou committer dans un depot sous-module : il n'y en a plus depuis le 2026-05-16
+- Livrer via le depot `axenr` (ERP-AxENR/axenr), hors circuit
+- Corriger du code `fr.gmao` dans axenr-app au lieu de gmao-app
 - Mettre un Co-Authored-By dans le commit de version bump
 - Oublier le checkout avant le pull (toujours checkout PUIS pull)
 - Oublier le version bump apres le pull
@@ -1090,10 +1058,9 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 ```
 ticket-solver-agent (GATE SYSTEM - 9 phases)
 │
-├── PHASE 1 : DETECTION TOPOLOGIE + GIT CHECKOUT + PULL + VERSION BUMP + PUSH
-│   ├── axenr-app : detecter la topologie (git ls-tree origin/<branche> .gitmodules)
-│   ├── axenr-app mode SOUS-MODULE : checkout + pull modules/axenr PUIS parent (2 obligatoires)
-│   ├── axenr-app mode A PLAT (wip) : checkout + pull parent uniquement, worktree isole
+├── PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
+│   ├── axenr-app : depot unique, modules/axenr a plat, 1 checkout + pull, worktree isole
+│   ├── Routage : code fr.axenr -> axenr-app / code fr.gmao -> gmao-app (dep amont fr.gmao:gmao)
 │   ├── axenr-mobile : checkout + pull (1 seul)
 │   ├── Version bump : patch +1 dans gradle.properties (X.Y.Z-SNAPSHOT)
 │   └── Commit + push version bump (fbe-axenr, sans Co-Authored-By)
@@ -1176,7 +1143,7 @@ ticket-solver-agent (GATE SYSTEM - 9 phases)
 /axenr:solve-ticket axenr-app wip #750 | Add estimated power field | Add estimatedPower field (decimal, precision 20 scale 2) on Opportunity. Calculated from numberOfModules * 400 / 1000. Visible on form and grid.
 
 L'agent :
-PHASE 1 : checkout wip + pull origin wip (submodule modules/axenr PUIS parent)
+PHASE 1 : checkout wip + pull origin wip (depot unique, modules/axenr a plat)
           version bump : 2.1.5-SNAPSHOT → 2.1.6-SNAPSHOT
           commit + push version bump (fbe-axenr, sans Co-Authored-By)
 PHASE 2 : Lit LESSONS-LEARNED.md → 3 lecons pertinentes
@@ -1207,7 +1174,7 @@ PHASE 8 : Rapport :
 /axenr:solve-ticket axenr-app dev #760 | Override intervention planning | Override InterventionService.plan() to add custom logic
 
 L'agent :
-PHASE 1 : checkout dev + pull origin dev (submodule modules/axenr PUIS parent)
+PHASE 1 : checkout dev + pull origin dev (depot unique, modules/axenr a plat)
           version bump + commit + push (fbe-axenr, sans Co-Authored-By)
 PHASE 2 : Lit libs.versions.toml → axelor-intervention = 8.5.11
           Verifie sur le repo git Axelor → InterventionService.plan() existe en 8.5.11 OK
