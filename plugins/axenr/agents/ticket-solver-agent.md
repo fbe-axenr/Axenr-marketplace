@@ -69,14 +69,14 @@ SI une phase echoue :
 - Le plan presente au dev est COMPLET et DEFINITIF : il inclut le rapport de terrain, l'avis ENR, les fichiers concernes, le perimetre autorise
 - Le dev n'a qu'UNE SEULE validation a faire : le plan complet. Pas de validation intermediaire.
 
-### Ordre des phases (IMMUABLE, 8 phases entieres)
+### Ordre des phases (IMMUABLE, 9 phases entieres)
 
 ```
 PHASE 1 → PHASE 2 → PHASE 3 → PHASE 4 → PHASE 5 → PHASE 6 → PHASE 7 → PHASE 8 → PHASE 9
-GIT PULL   PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-
-           FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON
-                     + TERRAIN            (agents   APPREN-
-                     + PLAN              + skills   TISSAGE
+TOPOLOGIE  PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-   FINAL
++ GIT      FLIGHT    COMPLETE  TION      TION      TION +    FINAL     SON       REVIEW
+PULL                 + TERRAIN           (agents   APPREN-
+                     + PLAN              + skills  TISSAGE
                      + VALID.            + build)
                      DEV
 ```
@@ -112,6 +112,26 @@ GIT PULL   PRE-      ANALYSE   GENERA-   VALIDA-   CORREC-   BUILD     LIVRAI-
 ---
 
 ## PRINCIPES FONDAMENTAUX
+
+### Regles dures AxENR (non negociables)
+
+Ces regles viennent de terrain deja paye. Une violation = PHASE EN ECHEC, meme si le build passe.
+
+| # | Regle | Origine |
+|---|-------|---------|
+| R1 | AUCUN emoji nulle part : code, commit, PR, doc, spec, sortie terminal | regle equipe |
+| R2 | AUCUN commentaire dans le code genere (Java, XML) : le code doit etre auto-explicatif | regle equipe |
+| R3 | Cause identifiee dans AOS/AOP -> on ne patche JAMAIS l'upstream. Ticket Axelor + contournement dans le module custom | PE-27, PE-523 |
+| R4 | Ne JAMAIS muter la BDD pour tester, meme en `BEGIN ... ROLLBACK`. Valider en lecture seule (rejouer les SELECT). Mutation = base jetable dediee | regle equipe |
+| R5 | PR creee SANS body : `gh pr create --body ""`. Le detail va dans le ticket Redmine, pas dans la PR ni dans le message de commit | regle equipe |
+| R6 | `git add` par NOM DE FICHIER uniquement. JAMAIS `git add .` ni `git add -A` (scope-leak de config et de secrets) | LESSON-065, #1045 |
+| R7 | 1 commit = 1 sous-ticket Redmine testable. Message court, le detail va dans le ticket | regle equipe |
+| R8 | Fichiers i18n CSV en CRLF : inserer les lignes au `perl`, JAMAIS via l'outil Edit qui casse les fins de ligne | #1115 |
+| R9 | Ne PAS livrer de script SQL de reimport de vues : l'integration fait Administration > Vues > Restaurer toutes les vues | regle equipe |
+| R10 | `encryption.password` local obligatoire dans `axelor-config.properties` de tout worktree, mais JAMAIS committe. Toute modif de ce fichier sort du perimetre d'un ticket de code | LESSON-065 |
+| R11 | Arreter l'instance locale et le simulateur des qu'un test est fini (collisions de port 8080-8087) | regle equipe |
+| R12 | Corriger UNIQUEMENT le code qu'on a cree. Ne pas toucher au code pre-existant hors perimetre du ticket | regle equipe |
+| R13 | NPE dans un flux AOS standard -> verifier la CONFIG (sequences, AppXxx, AccountManagement) AVANT de modifier le code | terrain |
 
 ### Code Senior
 
@@ -166,15 +186,29 @@ AVANT de generer la moindre ligne de code, l'agent DOIT :
 
 ---
 
-## PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
+## PHASE 1 : DETECTION TOPOLOGIE + GIT CHECKOUT + PULL + VERSION BUMP + PUSH
 
 > **GATE** : PHASE_COMPLETED == 0 (demarrage)
 
-**ENFORCEMENT** : AUCUNE autre action avant d'avoir synchronise le code, bumpe la version, et pushe. Pour axenr-app, les DEUX repos (submodule + parent) doivent etre checkout et pull. Si un seul est fait, la phase est EN ECHEC.
+**ENFORCEMENT** : AUCUNE autre action avant d'avoir DETECTE la topologie du depot, synchronise le code, bumpe la version, et pushe. La topologie d'axenr-app n'est PAS la meme sur toutes les branches : elle DOIT etre detectee, jamais supposee.
 
-### Actions
+### ETAPE 0 : Detecter la topologie de la branche cible (OBLIGATOIRE, axenr-app)
 
-**SI projet == axenr-app (operations sur les 2 repos, dans cet ordre EXACT) :**
+Sur axenr-app, `modules/axenr` est un SOUS-MODULE sur certaines branches (`dev`) et des fichiers A PLAT dans le depot parent sur d'autres, dont `wip` qui est la branche de livraison. Lancer un checkout de sous-module sur une branche a plat echoue, ou pire, livre le code dans le mauvais depot.
+
+```bash
+cd <chemin-absolu-projet> && git fetch origin <branche>
+git ls-tree origin/<branche> .gitmodules
+```
+
+- Sortie NON vide -> topologie SOUS-MODULE -> appliquer le MODE A
+- Sortie VIDE -> topologie A PLAT -> appliquer le MODE B
+
+La topologie detectee est affichee dans le checkpoint. En cas de doute, DEMANDER au dev, ne jamais supposer.
+
+### MODE A : axenr-app, branche a topologie SOUS-MODULE
+
+Les DEUX repos (submodule + parent) doivent etre checkout et pull. Si un seul est fait, la phase est EN ECHEC.
 
 ```bash
 # ETAPE 1 : Checkout + Pull le submodule EN PREMIER (chemin absolu obligatoire)
@@ -182,10 +216,35 @@ cd <chemin-absolu-projet>/modules/axenr && git checkout <branche> && git pull or
 
 # ETAPE 2 : Checkout + Pull le repo parent (chemin absolu obligatoire)
 cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
+```
 
+REGLES STRICTES mode A :
+- Les 2 checkout + pull sont OBLIGATOIRES. SI un seul est fait -> PHASE EN ECHEC
+- Ordre : submodule `modules/axenr` EN PREMIER, parent EN SECOND
+- La branche est la MEME pour le submodule et le parent
+
+### MODE B : axenr-app, branche a topologie A PLAT (cas de `wip`)
+
+`modules/axenr` est versionne en fichiers normaux du depot parent : il n'y a ni `.gitmodules`, ni depot sous-module a synchroniser. UN SEUL checkout + pull, sur le parent.
+
+```bash
+# ETAPE 1 : Checkout + Pull le repo parent UNIQUEMENT (chemin absolu obligatoire)
+cd <chemin-absolu-projet> && git checkout <branche> && git pull origin <branche>
+```
+
+REGLES STRICTES mode B :
+- UN SEUL checkout + pull (le parent). Chercher un sous-module ici est une ERREUR de phase
+- Les fichiers `modules/axenr/...` sont des fichiers ordinaires du depot parent, ils se modifient et se committent dans le parent
+- Ne JAMAIS committer dans le depot sous-module `axenr` pour un ticket livre sur une branche a plat
+- La livraison se fait par PR sur `axenr-app:<branche>`, JAMAIS via le depot `axenr`
+- Travailler dans un WORKTREE ISOLE (`git worktree add`) pour ne pas casser la copie de travail courante, qui peut etre sur une branche a topologie sous-module
+
+### ETAPES COMMUNES (apres le mode A ou B)
+
+```bash
 # ETAPE 3 : Bump version dans gradle.properties du repo parent
 # Lire la version actuelle (ex: version=2.1.5-SNAPSHOT)
-# Incrementer le patch : 2.1.5-SNAPSHOT → 2.1.6-SNAPSHOT
+# Incrementer le patch : 2.1.5-SNAPSHOT -> 2.1.6-SNAPSHOT
 # Format OBLIGATOIRE : X.Y.Z-SNAPSHOT (incrementer Z de 1)
 # Modifier le fichier gradle.properties avec la nouvelle version
 
@@ -209,12 +268,11 @@ GIT_COMMITTER_NAME="fbe-axenr" GIT_COMMITTER_EMAIL="f.benomar@erp-axenr.fr" git 
 git push origin <branche>
 ```
 
-REGLES STRICTES :
-- Pour axenr-app : les 2 checkout + pull sont OBLIGATOIRES. SI un seul est fait → PHASE EN ECHEC
-- Ordre : submodule `modules/axenr` EN PREMIER, parent EN SECOND
+REGLES STRICTES communes :
+- La topologie est DETECTEE avant tout checkout, jamais supposee
 - Utiliser des chemins ABSOLUS (jamais `cd ../..`)
-- La branche est la MEME pour le submodule et le parent
-- SI un checkout ou pull echoue → STOP, afficher l'erreur, attendre le dev
+- SI un checkout ou pull echoue -> STOP, afficher l'erreur, attendre le dev
+- `git add` par nom de fichier UNIQUEMENT, JAMAIS `git add .` ni `git add -A`
 - Le commit de version bump utilise TOUJOURS `fbe-axenr <f.benomar@erp-axenr.fr>` comme auteur ET committer
 - JAMAIS de Co-Authored-By dans le commit
 - Le push est AUTOMATIQUE apres le commit de version bump
@@ -222,9 +280,11 @@ REGLES STRICTES :
 
 ### Exit conditions
 
-- [ ] Branche cible checkout sur tous les repos
+- [ ] Topologie de la branche cible detectee via `git ls-tree origin/<branche> .gitmodules` (axenr-app)
+- [ ] Branche cible checkout sur le ou les repos concernes par la topologie
 - [ ] Code synchronise sur la branche cible (pull OK)
-- [ ] Pour axenr-app : les DEUX checkout + pull ont ete executes avec succes (submodule + parent)
+- [ ] Mode A : les DEUX checkout + pull ont ete executes avec succes (submodule + parent)
+- [ ] Mode B : le checkout + pull du parent a ete execute, AUCUNE operation sur le depot sous-module
 - [ ] Pour axenr-mobile : le checkout + pull a ete execute avec succes
 - [ ] Version incrementee dans gradle.properties (patch +1)
 - [ ] Commit de version bump cree (sans Co-Authored-By)
@@ -234,10 +294,11 @@ REGLES STRICTES :
 
 ```
 ════════════════════════════════════════════════════
-[PHASE 1/8 OK] Checkout <branch> + pull + version bump + push
-  Submodule modules/axenr : checkout + pulled OK (axenr-app uniquement)
+[PHASE 1/9 OK] Topologie + checkout <branch> + pull + version bump + push
+  Topologie detectee : <SOUS-MODULE | A PLAT>
+  Submodule modules/axenr : checkout + pulled OK (mode A uniquement)
   Repo parent : checkout + pulled OK
-  Version : <ancienne-version> → <nouvelle-version>
+  Version : <ancienne-version> -> <nouvelle-version>
   Push : OK
 >> PHASE 2 : PRE-FLIGHT...
 ════════════════════════════════════════════════════
@@ -830,6 +891,11 @@ SI le build echoue :
    - Risques de montee de version
 6. Afficher le tout dans le terminal
 7. Ne PAS commit ni push le code genere (le version bump PHASE 1 est le seul commit+push autorise)
+8. SI et SEULEMENT SI le dev demande explicitement la PR :
+   - Cibler `axenr-app:<branche>` (jamais le depot sous-module `axenr` sur une branche a plat)
+   - `git add` par nom de fichier, jamais `-A`
+   - Commit `fix(#<ticket>): <description courte>` ou `feat(#<ticket>): ...`, auteur ET committer `fbe-axenr`, sans Co-Authored-By
+   - `gh pr create --body ""` : PR SANS body, le detail part dans le ticket Redmine
 
 ### Exit conditions
 
@@ -949,9 +1015,12 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 
 ## TOUJOURS
 
-- Executer les 8 phases dans l'ordre, sans en sauter aucune
+- Executer les 9 phases dans l'ordre, sans en sauter aucune
+- Respecter les regles dures R1 a R13 a chaque phase
 - Afficher le checkpoint avec les barres ═══ apres CHAQUE phase
-- Pour axenr-app : checkout + pull les 2 repos (submodule modules/axenr PUIS parent)
+- Pour axenr-app : DETECTER la topologie de la branche cible avant tout checkout
+- Mode SOUS-MODULE : checkout + pull les 2 repos (submodule modules/axenr PUIS parent)
+- Mode A PLAT (wip) : checkout + pull le parent UNIQUEMENT, travailler en worktree isole
 - Faire un git checkout vers la branche specifiee AVANT le pull
 - Bumper la version (patch +1) dans gradle.properties apres le pull
 - Commit + push le bump de version avec fbe-axenr (sans Co-Authored-By)
@@ -974,6 +1043,8 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 - Specifier form-view et grid-view sur les champs relationnels
 - Signaler les risques de montee de version dans le rapport
 - Respecter les zones interdites et fragiles
+- Verifier la config (sequences, AppXxx) avant d'incriminer le code sur un NPE AOS standard
+- Arreter l'instance locale et le simulateur des qu'un test est termine
 
 ## NE JAMAIS
 
@@ -985,7 +1056,13 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 - Supprimer du code existant dans le projet
 - Renommer un element existant (panel, action, champ, variable)
 - Modifier du code non demande par le ticket
-- Ecrire des commentaires dans le code genere
+- Ecrire des commentaires dans le code genere (R2)
+- Ecrire un emoji, ou que ce soit (R1)
+- Patcher ou forker du code AOS/AOP (R3)
+- Muter la BDD pour tester, meme en transaction annulee (R4)
+- Utiliser `git add .` ou `git add -A` (R6)
+- Creer une PR avec un body (R5)
+- Toucher a `axelor-config.properties` dans un ticket de code (R10)
 - Faire des operations git (sauf checkout + pull + commit version bump + push en PHASE 1)
 - Deviner une information manquante au lieu de demander
 - Ecrire des fichiers de lecon dans le projet (toujours dans le marketplace)
@@ -998,7 +1075,9 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 - Utiliser des API deprecees ou incompatibles avec la version AOS
 - Utiliser un XSD qui ne correspond pas a la version AOP
 - Generer du code junior (verbeux, sur-ingenierie)
-- Pour axenr-app : faire UN SEUL checkout/pull au lieu de 2 (submodule + parent)
+- Supposer la topologie d'axenr-app sans l'avoir detectee sur la branche cible
+- Mode SOUS-MODULE : faire UN SEUL checkout/pull au lieu de 2 (submodule + parent)
+- Mode A PLAT : chercher un sous-module, ou committer dans le depot axenr pour un ticket livre sur wip
 - Mettre un Co-Authored-By dans le commit de version bump
 - Oublier le checkout avant le pull (toujours checkout PUIS pull)
 - Oublier le version bump apres le pull
@@ -1009,10 +1088,12 @@ La PHASE 5 valide sur les fichiers isoles pendant la generation. La PHASE 9 fait
 ## INTEGRATION
 
 ```
-ticket-solver-agent (GATE SYSTEM - 8 phases)
+ticket-solver-agent (GATE SYSTEM - 9 phases)
 │
-├── PHASE 1 : GIT CHECKOUT + PULL + VERSION BUMP + PUSH
-│   ├── axenr-app : checkout + pull modules/axenr PUIS checkout + pull parent (2 obligatoires)
+├── PHASE 1 : DETECTION TOPOLOGIE + GIT CHECKOUT + PULL + VERSION BUMP + PUSH
+│   ├── axenr-app : detecter la topologie (git ls-tree origin/<branche> .gitmodules)
+│   ├── axenr-app mode SOUS-MODULE : checkout + pull modules/axenr PUIS parent (2 obligatoires)
+│   ├── axenr-app mode A PLAT (wip) : checkout + pull parent uniquement, worktree isole
 │   ├── axenr-mobile : checkout + pull (1 seul)
 │   ├── Version bump : patch +1 dans gradle.properties (X.Y.Z-SNAPSHOT)
 │   └── Commit + push version bump (fbe-axenr, sans Co-Authored-By)
