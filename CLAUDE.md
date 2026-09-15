@@ -52,6 +52,7 @@ axenr-marketplace/
 | template-expert-catalog | Catalogue de reference pour axenr-template-expert (patterns XDocReport, pieges, modeles racines, 77 champs + 39 techniques, contournement Groovy 3+ niveaux) |
 | client-context-detector | Detecte le client AxENR depuis le cwd (axenr-app / systeko-app / planeteenr-app / emeraude-solaire-app / synambu / energ-ia / yooz) et charge les ressources specifiques |
 | bi-templates-catalog | Catalogue BI pour axenr-bi-architect (10 templates SQL pretes, KPIs strategique/tactique/operationnel/ENR, bonnes pratiques Superset, modele de donnees Axelor detaille par domaine) |
+| axelor-droits-expert | Expert des regles de droit Axelor : conception de matrice, mutualisation des roles entre groupes, generation du fichier d'import, audit et diagnostic des refus d'acces. 10 regles d'or sourcees sur le code AOP |
 
 ### Commands AxENR (plugins/axenr/commands/)
 
